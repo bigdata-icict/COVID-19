@@ -19,9 +19,9 @@ MIN_CASES_TH = 10
 MIN_DAYS_r0_ESTIMATE = 14
 MIN_DATA_BRAZIL = '2020-03-26'
 DEFAULT_CITY = 'São Paulo/SP'
-DEFAULT_STATE = 'SP'
+DEFAULT_STATE = 'RJ'
 DEFAULT_PARAMS = {
-    'fator_subr': 40.0,
+    'fator_subr': 1.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
@@ -184,17 +184,18 @@ def make_download_href(df, params, r0_dist, should_estimate_r0):
 
 
 def make_EI_df(model, model_output, sample_size):
-    _, E, I, _, t = model_output
+    _, E, I, R, t = model_output
     size = sample_size*model.params['t_max']
     return (pd.DataFrame({'Exposed': E.reshape(size),
                           'Infected': I.reshape(size),
+                          'Recovered': R.reshape(size),
                           'run': np.arange(size) % sample_size})
               .assign(day=lambda df: (df['run'] == 0).cumsum() - 1))
 
 
 def plot_EI(model_output, scale, start_date):
-    _, E, I, _, t = model_output
-    source = prep_tidy_data_to_plot(E, I, t, start_date)
+    _, E, I, R, t = model_output
+    source = prep_tidy_data_to_plot(E, I, R, t, start_date)
     return make_combined_chart(source,
                                scale=scale, 
                                show_uncertainty=True)
@@ -244,20 +245,15 @@ def make_r0_widgets(defaults=DEFAULT_PARAMS):
 def write():
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
-    w_granularity = st.sidebar.selectbox('Unidade',
-                                         options=['state', 'city'],
-                                         index=1,
-                                         format_func=global_format_func)
 
-    source = 'ms' if w_granularity == 'state' else 'wcota'
-    cases_df = data.load_cases(w_granularity, source)
-    population_df = data.load_population(w_granularity)
+    source = 'ms' 
+    cases_df = data.load_cases('state', source)
+    population_df = data.load_population('state')
 
-    DEFAULT_PLACE = (DEFAULT_CITY if w_granularity == 'city' else
-                     DEFAULT_STATE)
+    DEFAULT_PLACE = (DEFAULT_STATE)
 
     options_place = make_place_options(cases_df, population_df)
-    w_place = st.sidebar.selectbox('Município',
+    w_place = st.sidebar.selectbox('Estado',
                                    options=options_place,
                                    index=options_place.get_loc(DEFAULT_PLACE),
                                    format_func=global_format_func)
