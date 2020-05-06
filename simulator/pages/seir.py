@@ -41,13 +41,23 @@ def prepare_for_r0_estimation(df):
     )
 
 
+def estimate_active_cases(cases, gamma_sup):
+    return (
+        cases
+        .assign(estimatedActiveCases = lambda df: df['newCases'].rolling(window=int(gamma_sup),
+                                                                         min_periods=1)
+                                                                .sum()
+                )
+        .assign(estimatedRecoveredCases = lambda df: df['totalCases'] - df['estimatedActiveCases'])
+    )
+
+
 @st.cache
 def make_brazil_cases(cases_df):
     return (cases_df
             .stack(level=1)
             .sum(axis=1)
             .unstack(level=1))
-
 
 
 @st.cache
@@ -135,11 +145,15 @@ def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
 
 
 @st.cache
-def make_NEIR0(cases_df, population_df, place, date):
+def make_NEIR0(cases_df, population_df, place, date, gamma_sup=DEFAULT_PARAMS['gamma_inv_dist'][1]):
     N0 = population_df[place]
-    I0 = cases_df[place]['totalCases'][date]
+    I0 = (cases_df[place]
+          .pipe(estimate_active_cases, gamma_sup)
+            ['estimatedActiveCases'][date])
     E0 = 2*I0
-    R0 = 0
+    R0 = (cases_df[place]
+          .pipe(estimate_active_cases, gamma_sup)
+            ['estimatedRecoveredCases'][date])
     return (N0, E0, I0, R0)
 
 
@@ -263,7 +277,7 @@ def write():
                                   options=options_date,
                                   index=len(options_date)-1)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
-    
+
     # Estimativa R0
     st.markdown(texts.r0_ESTIMATION_TITLE)
     should_estimate_r0 = st.checkbox(
