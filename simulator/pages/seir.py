@@ -51,7 +51,7 @@ def estimate_active_cases(cases, gamma_sup):
         .assign(estimatedRecoveredCases = lambda df: df['totalCases'] - df['estimatedActiveCases'])
     )
 
-    
+
 @st.cache
 def make_brazil_cases(cases_df):
     return (cases_df
@@ -151,7 +151,9 @@ def make_NEIR0(cases_df, population_df, place, date, gamma_sup=DEFAULT_PARAMS['g
           .pipe(estimate_active_cases, gamma_sup)
             ['estimatedActiveCases'][date])
     E0 = 2*I0
-    R0 = 0
+    R0 = (cases_df[place]
+          .pipe(estimate_active_cases, gamma_sup)
+            ['estimatedRecoveredCases'][date])
     return (N0, E0, I0, R0)
 
 
@@ -275,7 +277,7 @@ def write():
                                   options=options_date,
                                   index=len(options_date)-1)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
-    
+
     # Estimativa R0
     st.markdown(texts.r0_ESTIMATION_TITLE)
     should_estimate_r0 = st.checkbox(
