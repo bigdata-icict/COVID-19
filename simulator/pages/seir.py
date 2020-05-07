@@ -198,18 +198,17 @@ def make_download_href(df, params, r0_dist, should_estimate_r0):
 
 
 def make_EI_df(model, model_output, sample_size):
-    _, E, I, R, t = model_output
+    _, E, I, _, t = model_output
     size = sample_size*model.params['t_max']
     return (pd.DataFrame({'Exposed': E.reshape(size),
                           'Infected': I.reshape(size),
-                          'Recovered': R.reshape(size),
                           'run': np.arange(size) % sample_size})
               .assign(day=lambda df: (df['run'] == 0).cumsum() - 1))
 
 
 def plot_EI(model_output, scale, start_date):
-    _, E, I, R, t = model_output
-    source = prep_tidy_data_to_plot(E, I, R, t, start_date)
+    _, E, I, _, t = model_output
+    source = prep_tidy_data_to_plot(E, I, t, start_date)
     return make_combined_chart(source,
                                scale=scale, 
                                show_uncertainty=True)

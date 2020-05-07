@@ -7,8 +7,7 @@ import pandas as pd
 
 plot_params = {
     "exposed": {"name": "Exposed", "color": "#1f77b4"},
-    "infected": {"name": "Infected", "color": "#ff7f0e"},
-    "recovered": {"name": "Recovered", "color": "#32cd32"},
+    "infected": {"name": "Infected", "color": "#ff7f0e"}
 }
 
 
@@ -51,25 +50,18 @@ def compute_mean_and_boundaries(df: pd.DataFrame, variable: str):
     )
 
 
-def prep_tidy_data_to_plot(E, I, R, t_space, start_date):
+def prep_tidy_data_to_plot(E, I, t_space, start_date):
     df_E = unstack_iterations_ndarray(E, t_space, plot_params["exposed"]["name"])
     df_I = unstack_iterations_ndarray(I, t_space, plot_params["infected"]["name"])
-    df_R = unstack_iterations_ndarray(R, t_space, plot_params["recovered"]["name"])
-
+    
     agg_df_E = compute_mean_and_boundaries(df_E, plot_params["exposed"]["name"])
     agg_df_I = compute_mean_and_boundaries(df_I, plot_params["infected"]["name"])
-    agg_df_R = compute_mean_and_boundaries(df_R, plot_params["recovered"]["name"])
+   
 
     data = (
         agg_df_E
         .merge(
             agg_df_I, 
-            how="left", 
-            left_index=True, 
-            right_index=True, 
-            validate="1:1"
-        ).merge(
-            agg_df_R, 
             how="left", 
             left_index=True, 
             right_index=True, 
@@ -147,14 +139,9 @@ def make_combined_chart(data, scale="log", show_uncertainty=True):
             plot_params["infected"]["color"],
             scale=scale,
         )
-        band_R = make_exposed_infected_error_area_chart(
-            data,
-            plot_params["recovered"]["name"],
-            plot_params["recovered"]["color"],
-            scale=scale,
-        )
+       
 
-        output = alt.layer(band_E, band_I, band_R, lines)
+        output = alt.layer(band_E, band_I, lines)
     
     return (
         alt.vconcat(
