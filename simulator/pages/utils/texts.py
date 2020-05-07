@@ -70,7 +70,7 @@ SIMULATION_CONFIG = '''
 
 ### Configurações da  simulação (menu à esquerda)
 
-#### Seleção de UF/Município
+#### Seleção de UF
 É possível selecionar uma unidade da federação ou município para utilizar seus parâmetros nas condições inicias de *População total* (N), *Indivíduos infecciosos inicialmente* (I0), *Indivíduos removidos com imunidade inicialmente* (R0) e *Indivíduos expostos inicialmente (E0)*.
 
 #### Limites inferiores e superiores dos parâmetros
