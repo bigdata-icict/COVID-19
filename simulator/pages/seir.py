@@ -258,7 +258,7 @@ def make_r0_widgets(defaults=DEFAULT_PARAMS):
 def write():
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
-
+    w_granularity = 'state'
     cases_df = data.load_cases(w_granularity, 'fiocruz')
     population_df = data.load_population(w_granularity)
 
