@@ -53,18 +53,18 @@ def compute_mean_and_boundaries(df: pd.DataFrame, variable: str):
 def prep_tidy_data_to_plot(E, I, t_space, start_date):
     df_E = unstack_iterations_ndarray(E, t_space, plot_params["exposto"]["name"])
     df_I = unstack_iterations_ndarray(I, t_space, plot_params["infectado"]["name"])
-    
+
     agg_df_E = compute_mean_and_boundaries(df_E, plot_params["exposto"]["name"])
     agg_df_I = compute_mean_and_boundaries(df_I, plot_params["infectado"]["name"])
-   
+
 
     data = (
         agg_df_E
         .merge(
-            agg_df_I, 
-            how="left", 
-            left_index=True, 
-            right_index=True, 
+            agg_df_I,
+            how="left",
+            left_index=True,
+            right_index=True,
             validate="1:1"
         ).reset_index()
     )
@@ -140,7 +140,7 @@ def make_combined_chart(data, scale="log", show_uncertainty=True):
             scale=scale,
         )
         output = alt.layer(band_E, band_I, lines)
-    
+
     return (
         alt.vconcat(
             output.interactive(),

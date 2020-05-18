@@ -124,8 +124,8 @@ def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
     st.sidebar.markdown('#### Parâmetros gerais')
 
     t_max = st.sidebar.number_input('Período de simulação em dias (t_max)',
-                                    min_value=1, max_value=8*30, step=1,
-                                    value=180)
+                                    min_value=7, max_value=90, step=1,
+                                    value=90)
 
     return {'fator_subr': fator_subr,
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
@@ -242,6 +242,7 @@ def make_r0_widgets(defaults=DEFAULT_PARAMS):
 
 
 def write():
+    
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
     w_granularity = st.sidebar.selectbox('Unidade',
