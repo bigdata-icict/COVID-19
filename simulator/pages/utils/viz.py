@@ -79,13 +79,14 @@ def prep_tidy_data_to_plot(E, I, t_space, start_date):
 def make_exposed_infected_line_chart(data: pd.DataFrame, scale="log"):
     return (
         alt.Chart(
-            data,
+            data.rename(columns={'Exposto_mean': 'Expostos (média)',
+                                 'Infectado_mean': 'Infectados (média)'}),
             width=600,
             height=400,
             title="Evolução no tempo de pessoas expostas e infectadas pelo COVID-19",
         )
         .transform_fold(
-            ["Exposto_mean", "Infectado_mean"],
+            ["Expostos (média)", "Infectados (média)"],
             ["Variável", "Valor"]  # equivalent to id_vars in pandas" melt
         )
         .mark_line()
@@ -107,6 +108,7 @@ def make_exposed_infected_error_area_chart(
     data: pd.DataFrame, variable: str, color: str, scale: str = "log"
 ):
     treated_source = _treat_negative_values_to_plot(data)
+    treated_source = treated_source.round({f"{variable}_lower": 0, f"{variable}_upper": 0})
     return (
         alt.Chart(treated_source)
         .transform_filter(f"datum.{variable}_lower > 0")
