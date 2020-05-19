@@ -127,5 +127,9 @@ def insert_logos():
         '<img src="https://imgur.com/XVMCKGT.png" alt="Logomarca 3778" style="border:0px;margin-left:40px;margin-top:7px;float:right;width:70px;"></img>'
         "</a>"
     )
-    logo_html["fiocruz"] = ''
+    logo_html["fiocruz"] = (
+        '<a href="https://bigdata.icict.fiocruz.br/"> '
+        '<img src="https://i.imgur.com/tS4CNnB.png" alt="Logomarca PCDAS" style="border:0px;margin-left:40px;margin-top:7px;float:right;width:70px;"></img>'
+        "</a>"
+    )
     return '<div style="text-align: right;">' + logo_html["3778"] + logo_html["fiocruz"] + "</div>"
