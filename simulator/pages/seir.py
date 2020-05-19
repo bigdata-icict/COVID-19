@@ -72,7 +72,7 @@ def make_date_options(cases_df, place):
             .strftime('%Y-%m-%d'))
 
 
-def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
@@ -80,52 +80,52 @@ def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
     fator_subr = st.sidebar.number_input(
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
-            value=defaults['fator_subr'])
+            value=widget_values.get('fator_subr', defaults['fator_subr']))
 
     st.sidebar.markdown('#### Condições iniciais')
     N = st.sidebar.number_input('População total (N)',
                                 min_value=0, max_value=1_000_000_000, step=1,
-                                value=_N0)
+                                value=widget_values.get('N', _N0))
 
     E0 = st.sidebar.number_input('Indivíduos expostos inicialmente (E0)',
                                  min_value=0, max_value=1_000_000_000,
-                                 value=_E0)
+                                 value=widget_values.get('E0', _E0))
 
     I0 = st.sidebar.number_input('Indivíduos infecciosos inicialmente (I0)',
                                  min_value=0, max_value=1_000_000_000,
-                                 value=_I0)
+                                 value=widget_values.get('I0', _I0))
 
     R0 = st.sidebar.number_input('Indivíduos removidos com imunidade inicialmente (R0)',
                                  min_value=0, max_value=1_000_000_000,
-                                 value=_R0)
+                                 value=widget_values.get('R0', _R0))
 
     st.sidebar.markdown('#### Período de infecção (1/γ) e tempo incubação (1/α)')
 
     gamma_inf = st.sidebar.number_input(
             'Limite inferior do período infeccioso médio em dias (1/γ)',
             min_value=1.0, max_value=60.0, step=0.1,
-            value=defaults['gamma_inv_dist'][0])
+            value=widget_values.get('gamma_inf', defaults['gamma_inv_dist'][0]))
 
     gamma_sup = st.sidebar.number_input(
             'Limite superior do período infeccioso médio em dias (1/γ)',
             min_value=1.0, max_value=60.0, step=0.1,
-            value=defaults['gamma_inv_dist'][1])
+            value=widget_values.get('gamma_sup', defaults['gamma_inv_dist'][1]))
 
     alpha_inf = st.sidebar.number_input(
             'Limite inferior do tempo de incubação médio em dias (1/α)',
             min_value=0.1, max_value=60.0, step=0.1,
-            value=defaults['alpha_inv_dist'][0])
+            value=widget_values.get('alpha_inf', defaults['alpha_inv_dist'][0]))
 
     alpha_sup = st.sidebar.number_input(
             'Limite superior do tempo de incubação médio em dias (1/α)',
             min_value=0.1, max_value=60.0, step=0.1,
-            value=defaults['alpha_inv_dist'][1])
+            value=widget_values.get('alpha_sup', defaults['alpha_inv_dist'][1]))
 
     st.sidebar.markdown('#### Parâmetros gerais')
 
     t_max = st.sidebar.number_input('Período de simulação em dias (t_max)',
                                     min_value=7, max_value=90, step=1,
-                                    value=90)
+                                    value=widget_values.get('t_max', 90))
 
     return {'fator_subr': fator_subr,
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
@@ -228,21 +228,21 @@ def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     return samples, used_brazil
 
 
-def make_r0_widgets(defaults=DEFAULT_PARAMS):
+def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     r0_inf = st.number_input(
              'Limite inferior do número básico de reprodução médio (R0)',
              min_value=0.01, max_value=10.0, step=0.25,
-             value=defaults['r0_dist'][0])
+             value=widget_values.get('r0_inf', defaults['r0_dist'][0]))
 
     r0_sup = st.number_input(
             'Limite superior do número básico de reprodução médio (R0)',
             min_value=0.01, max_value=10.0, step=0.25,
-            value=defaults['r0_dist'][1])
+            value=widget_values.get('r0_sup', defaults['r0_dist'][1]))
     return (r0_inf, r0_sup, .95, 'lognorm')
 
 
 def write():
-    
+
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
     w_granularity = st.sidebar.selectbox('Unidade',
@@ -261,7 +261,14 @@ def write():
                                    options=options_place,
                                    index=options_place.get_loc(DEFAULT_PLACE),
                                    format_func=global_format_func)
-
+    try:
+        widget_values = (pd.read_csv('data/foo.csv')
+                          .set_index('place')
+                          .T
+                          .to_dict()
+                          [w_place])
+    except:
+        widget_values = {}
     options_date = make_date_options(cases_df, w_place)
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
@@ -292,11 +299,11 @@ def write():
                     f'${np.quantile(r0_dist, 0.01):.03}$ e ${np.quantile(r0_dist, 0.99):.03}$*')
         st.markdown(texts.r0_CITATION)
     else:
-        r0_dist = make_r0_widgets()
+        r0_dist = make_r0_widgets(widget_values)
         st.markdown(texts.r0_ESTIMATION_DONT)
 
     # Previsão de infectados
-    w_params = make_param_widgets(NEIR0)
+    w_params = make_param_widgets(widget_values, NEIR0)
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
     ei_df = make_EI_df(model, model_output, SAMPLE_SIZE)
