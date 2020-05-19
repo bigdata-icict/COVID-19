@@ -28,6 +28,11 @@ DEFAULT_PARAMS = {
 }
 
 
+def hideable(func, show, hidden_value=None):
+    def curry(*args, **kwargs):
+        return func(*args, **kwargs) if show else hidden_value
+    return curry
+
 def prepare_for_r0_estimation(df):
     return (
         df
@@ -77,56 +82,80 @@ def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_P
     interval_density = 0.95
     family = 'lognorm'
 
-    fator_subr = st.sidebar.number_input(
+    fator_subr = hideable(st.sidebar.number_input,
+                          show=not('fator_subr' in widget_values),
+                          hidden_value=widget_values.get('fator_subr'))(
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
-            value=widget_values.get('fator_subr', defaults['fator_subr']))
+            value=defaults['fator_subr'])
 
     st.sidebar.markdown('#### Condições iniciais')
-    N = st.sidebar.number_input('População total (N)',
-                                min_value=0, max_value=1_000_000_000, step=1,
-                                value=widget_values.get('N', _N0))
+    N = hideable(st.sidebar.number_input,
+                show=not('N' in widget_values),
+                hidden_value=widget_values.get('N'))(
+                'População total (N)',
+                min_value=0, max_value=1_000_000_000, step=1,
+                value=_N0)
 
-    E0 = st.sidebar.number_input('Indivíduos expostos inicialmente (E0)',
-                                 min_value=0, max_value=1_000_000_000,
-                                 value=widget_values.get('E0', _E0))
+    E0 = hideable(st.sidebar.number_input,
+                 show=not('E0' in widget_values),
+                 hidden_value=widget_values.get('E0'))(
+                 'Indivíduos expostos inicialmente (E0)',
+                 min_value=0, max_value=1_000_000_000,
+                 value=_E0)
 
-    I0 = st.sidebar.number_input('Indivíduos infecciosos inicialmente (I0)',
-                                 min_value=0, max_value=1_000_000_000,
-                                 value=widget_values.get('I0', _I0))
+    I0 = hideable(st.sidebar.number_input,
+                  show=not('I0' in widget_values),
+                  hidden_value=widget_values.get('I0'))(
+                  'Indivíduos infecciosos inicialmente (I0)',
+                  min_value=0, max_value=1_000_000_000,
+                  value= _I0)
 
-    R0 = st.sidebar.number_input('Indivíduos removidos com imunidade inicialmente (R0)',
-                                 min_value=0, max_value=1_000_000_000,
-                                 value=widget_values.get('R0', _R0))
+    R0 = hideable(st.sidebar.number_input,
+                  show=not('R0' in widget_values),
+                  hidden_value=widget_values.get('R0'))(
+                  'Indivíduos removidos com imunidade inicialmente (R0)',
+                  min_value=0, max_value=1_000_000_000,
+                  value=_R0)
 
     st.sidebar.markdown('#### Período de infecção (1/γ) e tempo incubação (1/α)')
 
-    gamma_inf = st.sidebar.number_input(
-            'Limite inferior do período infeccioso médio em dias (1/γ)',
-            min_value=1.0, max_value=60.0, step=0.1,
-            value=widget_values.get('gamma_inf', defaults['gamma_inv_dist'][0]))
+    gamma_inf = hideable(st.sidebar.number_input,
+                        show=not('gamma_inf' in widget_values),
+                        hidden_value=widget_values.get('gamma_inf'))(
+                        'Limite inferior do período infeccioso médio em dias (1/γ)',
+                        min_value=1.0, max_value=60.0, step=0.1,
+                        value=defaults['gamma_inv_dist'][0])
 
-    gamma_sup = st.sidebar.number_input(
-            'Limite superior do período infeccioso médio em dias (1/γ)',
-            min_value=1.0, max_value=60.0, step=0.1,
-            value=widget_values.get('gamma_sup', defaults['gamma_inv_dist'][1]))
+    gamma_sup = hideable(st.sidebar.number_input,
+                        show=not('gamma_sup' in widget_values),
+                        hidden_value=widget_values.get('gamma_sup'))(
+                        'Limite superior do período infeccioso médio em dias (1/γ)',
+                        min_value=1.0, max_value=60.0, step=0.1,
+                        value=defaults['gamma_inv_dist'][1])
 
-    alpha_inf = st.sidebar.number_input(
-            'Limite inferior do tempo de incubação médio em dias (1/α)',
-            min_value=0.1, max_value=60.0, step=0.1,
-            value=widget_values.get('alpha_inf', defaults['alpha_inv_dist'][0]))
+    alpha_inf = hideable(st.sidebar.number_input,
+                        show=not('alpha_inf' in widget_values),
+                        hidden_value=widget_values.get('alpha_inf'))(
+                        'Limite inferior do tempo de incubação médio em dias (1/α)',
+                        min_value=0.1, max_value=60.0, step=0.1,
+                        value=defaults['alpha_inv_dist'][0])
 
-    alpha_sup = st.sidebar.number_input(
-            'Limite superior do tempo de incubação médio em dias (1/α)',
-            min_value=0.1, max_value=60.0, step=0.1,
-            value=widget_values.get('alpha_sup', defaults['alpha_inv_dist'][1]))
+    alpha_sup = hideable(st.sidebar.number_input,
+                        show=not('alpha_sup' in widget_values),
+                        hidden_value=widget_values.get('alpha_sup'))(
+                        'Limite superior do tempo de incubação médio em dias (1/α)',
+                        min_value=0.1, max_value=60.0, step=0.1,
+                        value=defaults['alpha_inv_dist'][1])
 
     st.sidebar.markdown('#### Parâmetros gerais')
 
-    t_max = st.sidebar.number_input('Período de simulação em dias (t_max)',
-                                    min_value=7, max_value=90, step=1,
-                                    value=widget_values.get('t_max', 90))
-
+    t_max = hideable(st.sidebar.number_input,
+                    show=not('t_max' in widget_values),
+                    hidden_value=int(widget_values.get('t_max', 90)))(
+                    'Período de simulação em dias (t_max)',
+                    min_value=7, max_value=90, step=1,
+                    value=90)
     return {'fator_subr': fator_subr,
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
@@ -229,15 +258,19 @@ def estimate_r0(cases_df, place, sample_size, min_days, w_date):
 
 
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
-    r0_inf = st.number_input(
-             'Limite inferior do número básico de reprodução médio (R0)',
-             min_value=0.01, max_value=10.0, step=0.25,
-             value=widget_values.get('r0_inf', defaults['r0_dist'][0]))
+    r0_inf = hideable(st.number_input,
+                     show=not('r0_inf' in widget_values),
+                     hidden_value=widget_values.get('r0_inf'))(
+                     'Limite inferior do número básico de reprodução médio (R0)',
+                     min_value=0.01, max_value=10.0, step=0.25,
+                     value=defaults['r0_dist'][0])
 
-    r0_sup = st.number_input(
+    r0_sup = hideable(st.number_input,
+                      show=not('r0_sup' in widget_values),
+                      hidden_value=widget_values.get('r0_sup'))(
             'Limite superior do número básico de reprodução médio (R0)',
             min_value=0.01, max_value=10.0, step=0.25,
-            value=widget_values.get('r0_sup', defaults['r0_dist'][1]))
+            value=defaults['r0_dist'][1])
     return (r0_inf, r0_sup, .95, 'lognorm')
 
 
@@ -262,13 +295,21 @@ def write():
                                    index=options_place.get_loc(DEFAULT_PLACE),
                                    format_func=global_format_func)
     try:
-        widget_values = (pd.read_csv('data/foo.csv')
+        raw_widget_values = (pd.read_csv('data/foo.csv')
                           .set_index('place')
                           .T
                           .to_dict()
                           [w_place])
+        widget_values = {k: v for k, v in raw_widget_values.items() if not np.isnan(v)}
     except:
         widget_values = {}
+
+    if widget_values:
+        st.markdown("### Parâmetros carregados")
+        st.write(f"Foram carregados parâmetros pré-selecionados para a unidade escolhida:  **{w_place}**.")
+        st.write('  \n'.join(f"{param}: {value}" for param, value in widget_values.items()))
+        st.markdown("---")
+
     options_date = make_date_options(cases_df, w_place)
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
@@ -304,6 +345,8 @@ def write():
 
     # Previsão de infectados
     w_params = make_param_widgets(widget_values, NEIR0)
+
+
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
     ei_df = make_EI_df(model, model_output, SAMPLE_SIZE)
