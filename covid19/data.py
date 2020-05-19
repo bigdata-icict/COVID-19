@@ -34,6 +34,12 @@ def _prepare_fiocruz_data(df, by):
                   .assign(city=lambda df: df['city'].str.rsplit(' ', 1)
                                                     .str.join('/')))
 
+
+def _make_total_deaths(df, by):
+    df = df.assign(deaths=lambda df: df.groupby([by])['new_deaths'].cumsum())
+    return df
+
+
 def load_cases(by, source='fiocruz'):
     '''Load cases from wcota/covid19br or covid.saude.gov.br or fiocruz
 
@@ -90,9 +96,11 @@ def load_cases(by, source='fiocruz'):
                 .rename(columns={'new_cases': 'newCases'})
                 .pipe(_prepare_fiocruz_data, by=by)
                 .assign(totalCases=lambda df: df.groupby([by])['newCases'].cumsum()))
+        df = _make_total_deaths(df, by)
+
 
     return (df.groupby(['date', by])
-              [['newCases', 'totalCases']]
+              [['newCases', 'totalCases', 'deaths']]
               .sum()
               .unstack(by)
               .sort_index()
