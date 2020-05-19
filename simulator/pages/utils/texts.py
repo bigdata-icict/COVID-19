@@ -7,7 +7,7 @@ Ciência de Dados aplicada à pandemia do novo coronavírus
 '''
 
 ABOUT = '''
-Este projeto é uma força tarefa das comunidades científica e tecnológica a fim de criar modelos de previsão de infectados pelo COVID-19 - e outras métricas relacionadas -, para o Brasil. O projeto é público e pode ser usado por todos. 
+Este projeto é uma força tarefa das comunidades científica e tecnológica a fim de criar modelos de previsão de infectados pelo COVID-19 - e outras métricas relacionadas -, para o Brasil. O projeto é público e pode ser usado por todos.
 
 Acesse [este link](https://github.com/3778/COVID-19) para informações detalhadas e instruções sobre como contribuir.
 '''
@@ -47,10 +47,10 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     ---
 
     ### Parâmetros da simulação
-    
+
     Valores iniciais dos compartimentos:
     '''
-    
+
     seir0_labels = [
         "Suscetíveis",
         "Expostos",
@@ -59,10 +59,10 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     ]
     seir0_values = list(map(int, SEIR0))
     seir0_dict = {
-        "Compartimento": seir0_labels, 
+        "Compartimento": seir0_labels,
         "Valor inicial": seir0_values,
     }
-    
+
     other_params_txt = f'''
     Demais parâmetros:
     - $${alpha_inv_inf:.03} < T_{{incub}} = 1/\\alpha < {alpha_inv_sup:.03}$$
@@ -70,7 +70,7 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     {r0_txt}
 
     Os intervalos de $$T_{{incub}}$$ e $$T_{{infec}}$$ definem 95% do intervalo de confiança de uma distribuição LogNormal.
-    ''' 
+    '''
     return intro_txt, seir0_dict, other_params_txt
 
 SIMULATION_CONFIG = '''
@@ -96,7 +96,7 @@ DATA_SOURCES = '''
 
 ### Refrências
 
-* 
+*
 *
 *
 
@@ -121,7 +121,23 @@ A metodologia utilizada para estimação foi baseada no artigo [*Thompson, R. N.
 '''
 
 def r0_NOT_ENOUGH_DATA(w_place, w_date): return f'''
-**{w_place} não possui dados suficientes na data 
+**{w_place} não possui dados suficientes na data
 {w_date} para fazer a estimação. Logo, foram
 utilizados os dados agregados Brasil**
 '''
+
+
+
+def insert_logos():
+    logo_html = {}
+    logo_html["3778"] = (
+        '<a href="https://3778.care"> '
+        '<img src="https://imgur.com/XVMCKGT.png" alt="Logomarca 3778" style="border:0px;margin-left:40px;margin-top:7px;float:right;width:70px;"></img>'
+        "</a>"
+    )
+    logo_html["fiocruz"] = (
+        '<a href="https://bigdata.icict.fiocruz.br/"> '
+        '<img src="https://i.imgur.com/tS4CNnB.png" alt="Logomarca PCDAS" style="border:0px;margin-left:40px;margin-top:7px;float:right;width:70px;"></img>'
+        "</a>"
+    )
+    return '<div style="text-align: right;">' + logo_html["3778"] + logo_html["fiocruz"] + "</div>"

@@ -54,18 +54,18 @@ def compute_mean_and_boundaries(df: pd.DataFrame, variable: str):
 def prep_tidy_data_to_plot(E, I, t_space, start_date):
     df_E = unstack_iterations_ndarray(E, t_space, plot_params["exposto"]["name"])
     df_I = unstack_iterations_ndarray(I, t_space, plot_params["infectado"]["name"])
-    
+
     agg_df_E = compute_mean_and_boundaries(df_E, plot_params["exposto"]["name"])
     agg_df_I = compute_mean_and_boundaries(df_I, plot_params["infectado"]["name"])
-   
+
 
     data = (
         agg_df_E
         .merge(
-            agg_df_I, 
-            how="left", 
-            left_index=True, 
-            right_index=True, 
+            agg_df_I,
+            how="left",
+            left_index=True,
+            right_index=True,
             validate="1:1"
         ).reset_index()
     )
@@ -96,13 +96,14 @@ def prep_death_data_to_plot(R, t_space, start_date):
 def make_exposed_infected_line_chart(data: pd.DataFrame, scale="log"):
     return (
         alt.Chart(
-            data,
+            data.rename(columns={'Exposto_mean': 'Expostos (média)',
+                                 'Infectado_mean': 'Infectados (média)'}),
             width=600,
             height=400,
             title="Evolução no tempo de pessoas expostas e infectadas pelo COVID-19",
         )
         .transform_fold(
-            ["Exposto_mean", "Infectado_mean"],
+            ["Expostos (média)", "Infectados (média)"],
             ["Variável", "Valor"]  # equivalent to id_vars in pandas" melt
         )
         .mark_line()
@@ -124,6 +125,7 @@ def make_exposed_infected_error_area_chart(
     data: pd.DataFrame, variable: str, color: str, scale: str = "log"
 ):
     treated_source = _treat_negative_values_to_plot(data)
+    treated_source = treated_source.round({f"{variable}_lower": 0, f"{variable}_upper": 0})
     return (
         alt.Chart(treated_source)
         .transform_filter(f"datum.{variable}_lower > 0")
@@ -157,7 +159,7 @@ def make_combined_chart(data, scale="log", show_uncertainty=True):
             scale=scale,
         )
         output = alt.layer(band_E, band_I, lines)
-    
+
     return (
         alt.vconcat(
             output.interactive(),
