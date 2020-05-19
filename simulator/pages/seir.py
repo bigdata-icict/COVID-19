@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from pages.utils.formats import global_format_func
-from pages.utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
+from pages.utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0, prep_death_data_to_plot, make_death_chart
 from pages.utils import texts
 
 from covid19 import data
@@ -73,7 +73,7 @@ def make_date_options(cases_df, place):
             .strftime('%Y-%m-%d'))
 
 
-def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, lethality_mean_est, r0_samples=None, defaults=DEFAULT_PARAMS):
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
@@ -82,6 +82,12 @@ def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_P
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
             value=widget_values.get('fator_subr', defaults['fator_subr']))
+
+    lethality_mean = st.sidebar.number_input(
+            ('Taxa de letalidade (em %).'),
+            min_value=0.0, max_value=100.0, step=0.1,
+            value=lethality_mean_est)
+
 
     st.sidebar.markdown('#### Condições iniciais')
     N = st.sidebar.number_input('População total (N)',
@@ -129,11 +135,12 @@ def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_P
                                     value=widget_values.get('t_max', 90))
 
 
-    return {'fator_subr': fator_subr,
+    return ({'fator_subr': fator_subr,
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
-            'NEIR0': (N, E0, I0, R0)}
+            'NEIR0': (N, E0, I0, R0)}, 
+            lethality_mean)
 
 
 @st.cache
@@ -202,6 +209,16 @@ def plot_EI(model_output, scale, start_date):
                                show_uncertainty=True)
 
 
+def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
+    _, _, _, R, t = model_output 
+    R /= subnotification_factor
+    R *= (lethality_mean/100)
+    source = prep_death_data_to_plot(R, t, start_date)
+    return make_death_chart(source,
+                            scale=scale,
+                            show_uncertainty=True)
+
+
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     used_brazil = False
 
@@ -228,6 +245,13 @@ def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     Rt.compute_posterior_parameters()
     samples = Rt.sample_from_posterior(sample_size=sample_size)
     return samples, used_brazil
+
+
+
+def estimate_lethality_mean(cases_death, cases_covid):
+    lethality_mean = float((cases_death / cases_covid).mean()) * 100
+    return lethality_mean
+
 
 
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
@@ -305,8 +329,13 @@ def write():
         r0_dist = make_r0_widgets(widget_values)
         st.markdown(texts.r0_ESTIMATION_DONT)
 
+    # Estimativa de Letalidade
+    lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
+                                                  cases_df[w_place]['totalCases'])
     # Previsão de infectados
-    w_params = make_param_widgets(widget_values, NEIR0)
+
+    w_params, lethality_mean = make_param_widgets(NEIR0, lethality_mean_est=lethality_mean_est)
+
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
     ei_df = make_EI_df(model, model_output, SAMPLE_SIZE)
@@ -321,6 +350,12 @@ def write():
         href = make_download_href(ei_df, w_params, r0_dist, should_estimate_r0)
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
+
+    # Plot Deaths
+    st.markdown(texts.DEATHS_INTRO)
+    fig_deahts = plot_deaths(model_output, 'linear', w_date, lethality_mean,
+                             w_params['fator_subr'])
+    st.altair_chart(fig_deahts)
 
     # Parâmetros de simulação
     dists = [w_params['alpha_inv_dist'],

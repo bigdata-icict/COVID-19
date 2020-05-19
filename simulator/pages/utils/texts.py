@@ -25,6 +25,14 @@ O gráfico abaixo mostra o resultado da simulação da evolução de pacientes e
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
 '''
 
+DEATHS_INTRO='''
+### Previsão de óbitos
+O gráfico abaixo mostra a estimativa de óbitos acumulados para os parâmetros selecionados. O cálculo é realizado a partir da aplicação de uma taxa de letalidade.
+
+**(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
+'''
+
+
 def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     alpha_inv_inf, alpha_inv_sup, _, _ = intervals[0]
     gamma_inv_inf, gamma_inv_sup, _, _ = intervals[1]
