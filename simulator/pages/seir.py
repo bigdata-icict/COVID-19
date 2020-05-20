@@ -73,7 +73,8 @@ def make_date_options(cases_df, place):
             .strftime('%Y-%m-%d'))
 
 
-def make_param_widgets(NEIR0, lethality_mean_est, r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
+                       r0_samples=None, defaults=DEFAULT_PARAMS):
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
@@ -139,7 +140,7 @@ def make_param_widgets(NEIR0, lethality_mean_est, r0_samples=None, defaults=DEFA
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
-            'NEIR0': (N, E0, I0, R0)}, 
+            'NEIR0': (N, E0, I0, R0)},
             lethality_mean)
 
 
@@ -210,7 +211,7 @@ def plot_EI(model_output, scale, start_date):
 
 
 def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
-    _, _, _, R, t = model_output 
+    _, _, _, R, t = model_output
     R /= subnotification_factor
     R *= (lethality_mean/100)
     source = prep_death_data_to_plot(R, t, start_date)
@@ -334,7 +335,7 @@ def write():
                                                   cases_df[w_place]['totalCases'])
     # Previsão de infectados
 
-    w_params, lethality_mean = make_param_widgets(NEIR0, lethality_mean_est=lethality_mean_est)
+    w_params, lethality_mean = make_param_widgets(NEIR0, widget_values, lethality_mean_est=lethality_mean_est)
 
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
