@@ -373,6 +373,5 @@ def write():
     # Fontes dos dados
     st.markdown(texts.DATA_SOURCES)
 
-
 if __name__ == '__main__':
     write()
