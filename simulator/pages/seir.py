@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from pages.utils.formats import global_format_func
-from pages.utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
+from pages.utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0, plot_derivatives
 from pages.utils import texts
 
 from covid19 import data
@@ -27,7 +27,10 @@ DEFAULT_PARAMS = {
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 }
-
+DEFAULT_DERIVATIVES = {
+    'Leitos': lambda df: df['Infected'] * 0.005,
+    'Ventiladores': lambda df: df['Leitos'] * 0.25,
+}
 
 def prepare_for_r0_estimation(df):
     return (
@@ -242,6 +245,20 @@ def make_r0_widgets(defaults=DEFAULT_PARAMS):
     return (r0_inf, r0_sup, .95, 'lognorm')
 
 
+def make_EI_derivatives(ei_df, defaults=DEFAULT_DERIVATIVES):
+    ei_cols = ['Infected', 'Exposed']
+
+    return (
+        ei_df
+        .groupby('day')
+        [ei_cols]
+        .mean()
+        .assign(**DEFAULT_DERIVATIVES)
+        .reset_index()
+        .drop(ei_cols, axis=1)
+    )
+
+
 def write():
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
@@ -313,36 +330,9 @@ def write():
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
 
-    st.dataframe(cases_df['São Paulo/SP'].assign(total_diff = lambda df: df['totalCases'].diff()))
-
-    tx_internacao = 0.005
-    tx_ventilacao = 0.25
-
-    st.subheader("Demanda de leitos")
-
-    eh = (
-        ei_df
-        .groupby('day')
-        [['Infected']]
-        .mean()
-        .assign(beds = lambda df: df['Infected'] * tx_internacao)
-        .assign(ventilators = lambda df: df['beds'] * tx_ventilacao)
-        .reset_index()
-    )
-
-    st.dataframe(
-        eh
-    )
-
-    st.altair_chart(
-        alt.Chart(eh)
-        .mark_line()
-        .encode(
-            x='day',
-            y='beds'
-        )
-        .interactive()
-        )
+    derivatives = make_EI_derivatives(ei_df)
+    derivatives_chart = plot_derivatives(derivatives, w_date)
+    st.altair_chart(derivatives_chart)
 
     # Parâmetros de simulação
     dists = [w_params['alpha_inv_dist'],
