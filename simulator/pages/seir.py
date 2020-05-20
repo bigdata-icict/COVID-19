@@ -313,6 +313,37 @@ def write():
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
 
+    st.dataframe(cases_df['São Paulo/SP'].assign(total_diff = lambda df: df['totalCases'].diff()))
+
+    tx_internacao = 0.005
+    tx_ventilacao = 0.25
+
+    st.subheader("Demanda de leitos")
+
+    eh = (
+        ei_df
+        .groupby('day')
+        [['Infected']]
+        .mean()
+        .assign(beds = lambda df: df['Infected'] * tx_internacao)
+        .assign(ventilators = lambda df: df['beds'] * tx_ventilacao)
+        .reset_index()
+    )
+
+    st.dataframe(
+        eh
+    )
+
+    st.altair_chart(
+        alt.Chart(eh)
+        .mark_line()
+        .encode(
+            x='day',
+            y='beds'
+        )
+        .interactive()
+        )
+
     # Parâmetros de simulação
     dists = [w_params['alpha_inv_dist'],
              w_params['gamma_inv_dist'],
