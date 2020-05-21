@@ -27,9 +27,19 @@ DEFAULT_PARAMS = {
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 }
-DEFAULT_DERIVATIVES = {
-    'Leitos': lambda df: df['Infected'] * 0.005,
-    'Ventiladores': lambda df: df['Leitos'] * 0.25,
+DERIVATIVES = {
+    'functions': {
+        'Leitos': lambda df: df['Infected'] * DERIVATIVES['values']['Leitos'],
+        'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
+    },
+    'values': {
+        'Leitos': 0.005,
+        'Ventiladores': 0.25,
+    },
+    'descriptions': {
+        'Leitos': 'Número de leitos necessários por infectado',
+        'Ventiladores': 'Número de ventiladores necessários por leito ocupado',
+    },
 }
 
 def prepare_for_r0_estimation(df):
@@ -145,6 +155,15 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)},
             lethality_mean)
+
+
+def make_derivatives_widgets(defaults):
+    for derivative in DERIVATIVES['descriptions']:
+        DERIVATIVES['values'][derivative] = st.sidebar.number_input(
+            DERIVATIVES['descriptions'][derivative],
+            min_value=0.0, max_value=10.0, step=0.0001,
+            value=defaults[derivative], format="%.4f"
+        )
 
 
 @st.cache
@@ -271,7 +290,7 @@ def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     return (r0_inf, r0_sup, .95, 'lognorm')
 
 
-def make_EI_derivatives(ei_df, defaults=DEFAULT_DERIVATIVES):
+def make_EI_derivatives(ei_df, defaults=DERIVATIVES['functions']):
     ei_cols = ['Infected', 'Exposed']
 
     return (
@@ -279,7 +298,7 @@ def make_EI_derivatives(ei_df, defaults=DEFAULT_DERIVATIVES):
         .groupby('day')
         [ei_cols]
         .mean()
-        .assign(**DEFAULT_DERIVATIVES)
+        .assign(**defaults)
         .reset_index()
         .drop(ei_cols, axis=1)
     )
@@ -353,6 +372,7 @@ def write():
     # Previsão de infectados
 
     w_params, lethality_mean = make_param_widgets(NEIR0, widget_values, lethality_mean_est=lethality_mean_est)
+    make_derivatives_widgets(DERIVATIVES['values'])
 
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
