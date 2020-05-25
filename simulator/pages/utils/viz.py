@@ -253,3 +253,39 @@ def plot_r0(r0_samples, date, place, min_days):
         .configure_axis(labelFontSize=14, titleFontSize=14)
         .configure_legend(labelFontSize=14, titleFontSize=14)
     )
+
+
+def create_derivative_chart(derivative, df, start_date):
+    transformed_df = (
+        df.assign(day = lambda df: df['day'].apply(
+            lambda d: pd.to_datetime(start_date) + timedelta(d)
+        ))
+    )
+
+    return (
+        alt.Chart(
+            transformed_df,
+            width=600,
+            height=250,
+            title=f"Demanda de {derivative}"
+        )
+        .mark_line()
+        .encode(
+            x=alt.X("day:T", axis=alt.Axis(title="Data", labelSeparation=3)),
+            y=alt.Y(derivative, title=f"Qtde. de {derivative}")
+        )
+    )
+
+
+def plot_derivatives(derivatives_df, start_date):
+    return (
+        alt.vconcat(
+            *[
+                create_derivative_chart(derivative, derivatives_df, start_date)
+                for derivative in derivatives_df.columns.drop('day')
+            ],
+        )
+        .configure_title(fontSize=16)
+        .configure_axis(labelFontSize=14, titleFontSize=14)
+        .configure_legend(labelFontSize=14, titleFontSize=14)
+    )
