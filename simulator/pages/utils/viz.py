@@ -7,7 +7,8 @@ import pandas as pd
 
 plot_params = {
     "exposto": {"name": "Exposto", "color": "#1f77b4"},
-    "infectado": {"name": "Infectado", "color": "#ff7f0e"}
+    "infectado": {"name": "Infectado", "color": "#ff7f0e"},
+    "obito": {"name": "Óbito", "color": "#ff004d"}
 }
 
 
@@ -67,6 +68,22 @@ def prep_tidy_data_to_plot(E, I, t_space, start_date):
             right_index=True,
             validate="1:1"
         ).reset_index()
+    )
+
+    start_datetime = pd.to_datetime(start_date)
+    dates = [start_datetime + timedelta(offset) for offset in data['Dias']]
+    data["Datas"] = dates
+
+    return data
+
+
+def prep_death_data_to_plot(R, t_space, start_date):
+    df_R = unstack_iterations_ndarray(R, t_space, plot_params["obito"]["name"])
+    
+    agg_df_R = compute_mean_and_boundaries(df_R, plot_params["obito"]["name"])
+
+    data = (
+        agg_df_R.reset_index()
     )
 
     start_datetime = pd.to_datetime(start_date)
@@ -154,6 +171,49 @@ def make_combined_chart(data, scale="log", show_uncertainty=True):
     )
 
 
+def make_death_chart(data, scale="log", show_uncertainty=True):
+    lines = (
+        alt.Chart(
+            data,
+            width=600,
+            height=400,
+            title="Evolução do total de óbitos causados pelo COVID-19",
+        )
+        .mark_line(color=plot_params['obito']['color'])
+        .transform_fold(
+            ["Óbito_mean"],
+            ["Variável", "Valor"]  # equivalent to id_vars in pandas" melt
+        )
+        .encode(
+            x=alt.X("Datas:T", axis=alt.Axis(title="Data", labelSeparation=3)),
+            y=alt.Y("Valor:Q", title="Qtde. de pessoas", scale=alt.Scale(type=scale)),
+            #color="Variável:N"
+        )
+    )
+
+    if not show_uncertainty:
+        output = alt.layer(lines)
+
+    else:
+        band_R = make_exposed_infected_error_area_chart(
+            data,
+            plot_params["obito"]["name"],
+            plot_params["obito"]["color"],
+            scale=scale,
+        )
+        output = alt.layer(band_R, lines)
+    
+    return (
+        alt.vconcat(
+            output.interactive(),
+            padding={"top": 20}
+        )
+        .configure_title(fontSize=16)
+        .configure_axis(labelFontSize=14, titleFontSize=14)
+        .configure_legend(labelFontSize=14, titleFontSize=14)
+    )
+
+
 def plot_r0(r0_samples, date, place, min_days):
     r0_samples_cut = r0_samples[-min_days:]
     columns = pd.date_range(end=date, periods=r0_samples_cut.shape[1])
@@ -188,6 +248,42 @@ def plot_r0(r0_samples, date, place, min_days):
         alt.vconcat(
             output.interactive(),
             padding={"top": 20}
+        )
+        .configure_title(fontSize=16)
+        .configure_axis(labelFontSize=14, titleFontSize=14)
+        .configure_legend(labelFontSize=14, titleFontSize=14)
+    )
+
+
+def create_derivative_chart(derivative, df, start_date):
+    transformed_df = (
+        df.assign(day = lambda df: df['day'].apply(
+            lambda d: pd.to_datetime(start_date) + timedelta(d)
+        ))
+    )
+
+    return (
+        alt.Chart(
+            transformed_df,
+            width=600,
+            height=250,
+            title=f"Demanda de {derivative}"
+        )
+        .mark_line()
+        .encode(
+            x=alt.X("day:T", axis=alt.Axis(title="Data", labelSeparation=3)),
+            y=alt.Y(derivative, title=f"Qtde. de {derivative}")
+        )
+    )
+
+
+def plot_derivatives(derivatives_df, start_date):
+    return (
+        alt.vconcat(
+            *[
+                create_derivative_chart(derivative, derivatives_df, start_date)
+                for derivative in derivatives_df.columns.drop('day')
+            ],
         )
         .configure_title(fontSize=16)
         .configure_axis(labelFontSize=14, titleFontSize=14)

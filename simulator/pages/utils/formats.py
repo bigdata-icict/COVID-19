@@ -1,5 +1,7 @@
 def global_format_func(s):
+    print(s)
     fmt = {
+        'country': "País",
         'state': 'Estado',
         'city': 'Município'
     }

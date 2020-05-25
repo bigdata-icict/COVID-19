@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from pages.utils.formats import global_format_func
-from pages.utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
+from pages.utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0, prep_death_data_to_plot, make_death_chart, plot_derivatives
 from pages.utils import texts
 
 from covid19 import data
@@ -20,13 +20,27 @@ MIN_DAYS_r0_ESTIMATE = 14
 MIN_DATA_BRAZIL = '2020-03-26'
 DEFAULT_CITY = 'São Paulo/SP'
 DEFAULT_STATE = 'SP'
+DEFAULT_COUNTRY = 'Brasil'
 DEFAULT_PARAMS = {
-    'fator_subr': 40.0,
+    'fator_subr': 1.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 }
-
+DERIVATIVES = {
+    'functions': {
+        'Leitos': lambda df: df['Infected'] * DERIVATIVES['values']['Leitos'],
+        'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
+    },
+    'values': {
+        'Leitos': 0.005,
+        'Ventiladores': 0.25,
+    },
+    'descriptions': {
+        'Leitos': 'Número de leitos necessários por infectado',
+        'Ventiladores': 'Número de ventiladores necessários por leito ocupado',
+    },
+}
 
 def hideable(func, show, hidden_value=None):
     def curry(*args, **kwargs):
@@ -56,13 +70,21 @@ def make_brazil_cases(cases_df):
 
 
 @st.cache
-def make_place_options(cases_df, population_df):
+def make_place_options(cases_df, population_df,w_granularity):
+
     return (cases_df
             .swaplevel(0,1, axis=1)
             ['totalCases']
             .pipe(lambda df: df >= MIN_CASES_TH)
             .any()
             .pipe(lambda s: s[s & s.index.isin(population_df.index)])
+            .index if w_granularity == 'state' else
+            cases_df
+            .swaplevel(0,1, axis=1)
+            ['totalCases']
+            .pipe(lambda df: df >= MIN_CASES_TH)
+            .any()
+            .pipe(lambda s: s[s & s.index.isin(['Brasil'])])
             .index)
 
 
@@ -77,7 +99,8 @@ def make_date_options(cases_df, place):
             .strftime('%Y-%m-%d'))
 
 
-def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
+                       r0_samples=None, defaults=DEFAULT_PARAMS):
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
@@ -88,6 +111,13 @@ def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_P
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
             value=defaults['fator_subr'])
+
+    lethality_mean = hideable(st.sidebar.number_input,
+                              show=not('lethality_mean' in widget_values),
+                              hidden_value=widget_values.get('lethality_mean'))(
+            ('Taxa de letalidade (em %).'),
+            min_value=0.0, max_value=100.0, step=0.1,
+            value=lethality_mean_est)
 
     st.sidebar.markdown('#### Condições iniciais')
     N = hideable(st.sidebar.number_input,
@@ -156,11 +186,24 @@ def make_param_widgets(widget_values, NEIR0, r0_samples=None, defaults=DEFAULT_P
                     'Período de simulação em dias (t_max)',
                     min_value=7, max_value=90, step=1,
                     value=90)
-    return {'fator_subr': fator_subr,
+    return ({'fator_subr': fator_subr,
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
-            'NEIR0': (N, E0, I0, R0)}
+            'NEIR0': (N, E0, I0, R0)},
+            lethality_mean)
+
+
+def make_derivatives_widgets(defaults, widget_values):
+    for derivative in DERIVATIVES['descriptions']:
+        DERIVATIVES['values'][derivative] = hideable(
+            st.sidebar.number_input,
+            show=not(derivative in widget_values),
+            hidden_value=widget_values.get(derivative))(
+            DERIVATIVES['descriptions'][derivative],
+            min_value=0.0, max_value=10.0, step=0.0001,
+            value=defaults[derivative], format="%.4f"
+        )
 
 
 @st.cache
@@ -229,6 +272,16 @@ def plot_EI(model_output, scale, start_date):
                                show_uncertainty=True)
 
 
+def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
+    _, _, _, R, t = model_output
+    R /= subnotification_factor
+    R *= (lethality_mean/100)
+    source = prep_death_data_to_plot(R, t, start_date)
+    return make_death_chart(source,
+                            scale=scale,
+                            show_uncertainty=True)
+
+
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     used_brazil = False
 
@@ -257,6 +310,13 @@ def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     return samples, used_brazil
 
 
+
+def estimate_lethality_mean(cases_death, cases_covid):
+    lethality_mean = float((cases_death / cases_covid).mean()) * 100
+    return lethality_mean
+
+
+
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     r0_inf = hideable(st.number_input,
                      show=not('r0_inf' in widget_values),
@@ -274,28 +334,43 @@ def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     return (r0_inf, r0_sup, .95, 'lognorm')
 
 
+def make_EI_derivatives(ei_df, defaults=DERIVATIVES['functions']):
+    ei_cols = ['Infected', 'Exposed']
+
+    return (
+        ei_df
+        .groupby('day')
+        [ei_cols]
+        .mean()
+        .assign(**defaults)
+        .reset_index()
+        .drop(ei_cols, axis=1)
+    )
+
+
 def write():
 
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
     w_granularity = st.sidebar.selectbox('Unidade',
-                                         options=['state', 'city'],
+                                         options=['country', 'state'],
                                          index=1,
                                          format_func=global_format_func)
 
     cases_df = data.load_cases(w_granularity, 'fiocruz')
     population_df = data.load_population(w_granularity)
 
-    DEFAULT_PLACE = (DEFAULT_CITY if w_granularity == 'city' else
-                     DEFAULT_STATE)
+    DEFAULT_PLACE = (DEFAULT_STATE if w_granularity == 'state' else
+                     DEFAULT_COUNTRY)
 
-    options_place = make_place_options(cases_df, population_df)
-    w_place = st.sidebar.selectbox('Município',
+    options_place = make_place_options(cases_df, population_df,w_granularity)
+
+    w_place = st.sidebar.selectbox(global_format_func(w_granularity),
                                    options=options_place,
                                    index=options_place.get_loc(DEFAULT_PLACE),
                                    format_func=global_format_func)
     try:
-        raw_widget_values = (pd.read_csv('data/foo.csv')
+        raw_widget_values = (pd.read_csv('data/param.csv')
                           .set_index('place')
                           .T
                           .to_dict()
@@ -343,9 +418,12 @@ def write():
         r0_dist = make_r0_widgets(widget_values)
         st.markdown(texts.r0_ESTIMATION_DONT)
 
+    # Estimativa de Letalidade
+    lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
+                                                  cases_df[w_place]['totalCases'])
     # Previsão de infectados
-    w_params = make_param_widgets(widget_values, NEIR0)
-
+    w_params, lethality_mean = make_param_widgets(NEIR0, widget_values, lethality_mean_est=lethality_mean_est)
+    make_derivatives_widgets(DERIVATIVES['values'], widget_values)
 
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
@@ -362,6 +440,17 @@ def write():
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
 
+    # Plot Deaths
+    st.markdown(texts.DEATHS_INTRO)
+    fig_deahts = plot_deaths(model_output, 'linear', w_date, lethality_mean,
+                             w_params['fator_subr'])
+    st.altair_chart(fig_deahts)
+    st.markdown(texts.DEATH_DETAIL,unsafe_allow_html=True)
+
+    derivatives = make_EI_derivatives(ei_df)
+    derivatives_chart = plot_derivatives(derivatives, w_date)
+    st.altair_chart(derivatives_chart)
+
     # Parâmetros de simulação
     dists = [w_params['alpha_inv_dist'],
              w_params['gamma_inv_dist'],
@@ -377,7 +466,6 @@ def write():
     st.markdown(texts.SIMULATION_CONFIG)
     # Fontes dos dados
     st.markdown(texts.DATA_SOURCES)
-
 
 if __name__ == '__main__':
     write()
