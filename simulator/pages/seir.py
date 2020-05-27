@@ -22,6 +22,7 @@ DEFAULT_CITY = 'São Paulo/SP'
 DEFAULT_STATE = 'RJ'
 DEFAULT_PARAMS = {
     'fator_subr': 1.0,
+    'asymptomatic_rate': 50.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
@@ -81,6 +82,11 @@ def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
             min_value=1.0, max_value=200.0, step=0.1,
             value=defaults['fator_subr'])
 
+    asymptomatic_rate = st.sidebar.number_input(
+        "Taxa de assintomáticos em %",
+        min_value=0.0, max_value=99.0, step=0.1,
+        value=defaults['asymptomatic_rate']) / 100
+
     st.sidebar.markdown('#### Condições iniciais')
     N = st.sidebar.number_input('População total (N)',
                                 min_value=_N0, max_value=_N0, step=1,
@@ -126,7 +132,7 @@ def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
                                     min_value=1, max_value=8*30, step=1,
                                     value=180)
 
-    return {'fator_subr': fator_subr,
+    return {'fator_subr': fator_subr/ (1 - asymptomatic_rate),
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
