@@ -9,13 +9,13 @@ Ciência de Dados aplicada à pandemia do novo coronavírus
 ABOUT = '''
 Este projeto é uma força tarefa das comunidades científica e tecnológica a fim de criar modelos de previsão de infectados pelo COVID-19 - e outras métricas relacionadas -, para o Brasil. O projeto é público e pode ser usado por todos.
 
-Acesse [este link](https://github.com/3778/COVID-19) para informações detalhadas e instruções sobre como contribuir.
+Acesse [este link](https://github.com/bigdata-icict/COVID-19) para informações detalhadas e instruções sobre como contribuir.
 '''
 
 PARAMETER_SELECTION='''
 # Seleção de parâmetros
 Para simular outros cenários, altere um parâmetro e tecle **Enter**. O novo resultado será calculado e apresentado automaticamente.
-#### Parâmetros de UF
+#### Parâmetros de Localidade
 '''
 
 MODEL_INTRO='''
@@ -32,6 +32,15 @@ O gráfico abaixo mostra a estimativa de óbitos acumulados para os parâmetros 
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
 '''
 
+DEATH_DETAIL='''
+<details>
+    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);">
+        <p>A estimativa de óbitos é calculada multiplicando-se o número de casos estimados por uma taxa de letalidade. Como padrão, essa taxa é calculada a partir dos casos e óbitos oficialmente registrados no nível geográfico selecionado.</p>
+        <p>O valor da taxa pode ser alterado com o parâmetro Taxa de letalidade (em %, proporção dos casos que resultam em óbito).</p>
+    </div>
+</details>
+'''
 
 def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     alpha_inv_inf, alpha_inv_sup, _, _ = intervals[0]
@@ -78,8 +87,8 @@ SIMULATION_CONFIG = '''
 
 ### Configurações da  simulação (menu à esquerda)
 
-#### Seleção de UF/Município
-É possível selecionar uma unidade da federação ou município para utilizar seus parâmetros nas condições inicias de *População total* (N), *Indivíduos infecciosos inicialmente* (I0), *Indivíduos removidos com imunidade inicialmente* (R0) e *Indivíduos expostos inicialmente (E0)*.
+#### Seleção Brasil ou UF
+É possível selecionar o Brasil ou uma unidade da federação para utilizar seus parâmetros nas condições inicias de *População total* (N), *Indivíduos infecciosos inicialmente* (I0), *Indivíduos removidos com imunidade inicialmente* (R0) e *Indivíduos expostos inicialmente (E0)*.
 
 #### Limites inferiores e superiores dos parâmetros
 Também podem ser ajustados limites superior e inferior dos parâmetros *Período infeccioso*, *Tempo de incubação* e *Número básico de reprodução*. Estes limites definem um intervalo de confiança de 95% de uma distribuição log-normal para cada parâmetro.\n\n\n
@@ -90,10 +99,14 @@ DATA_SOURCES = '''
 
 ### Fontes dos dados
 
-* Casos confirmados por município: [Número de casos confirmados de COVID-19 no Brasil](https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv) (de https://github.com/wcota/covid19br)
 * Casos confirmados por estado: [Painel de casos de doença pelo coronavírus 2019 (COVID-19) no Brasil pelo Monitora Covid](https://bigdata-covid19.icict.fiocruz.br)
 * População: Estimativas da população enviadas ao TCU pelo IBGE em 01/07/2019(disponível em: [IBGE - Estimativas da população](https://www.ibge.gov.br/estatisticas/sociais/populacao/9103-estimativas-de-populacao.html))
+### Referências
 
+* [Report of the WHO-China Joint Mission on Coronavirus Disease 2019 (COVID-19)](https://www.who.int/docs/default-source/coronaviruse/who-china-joint-mission-on-covid-19-final-report.pdf)
+* [Early Transmission Dynamics in Wuhan, China, of Novel Coronavirus–Infected Pneumonia](https://www.nejm.org/doi/full/10.1056/NEJMoa2001316)
+* [Estimation of the reproductive number of novel coronavirus (COVID-19) and the probable outbreak size on the Diamond Princess cruise ship: A data-driven analysis](https://www.ijidonline.com/article/S1201-9712(20)30091-6/fulltext)
+* [MIDAS Online Portal for COVID-19 Modeling Research](https://midasnetwork.us/covid-19/#resources)
 ### Note Técnica
 [Clique aqui para acessar a nóta técnica do modelo SEIR-Bayes e a estimação do número básico de reprodução](https://github.com/3778/COVID-19/blob/master/nota-tecnica.pdf)
 '''
