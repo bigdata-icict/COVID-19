@@ -23,6 +23,7 @@ DEFAULT_STATE = 'SP'
 DEFAULT_COUNTRY = 'Brasil'
 DEFAULT_PARAMS = {
     'fator_subr': 1.0,
+    'asymptomatic_rate': 50.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
@@ -30,15 +31,15 @@ DEFAULT_PARAMS = {
 DERIVATIVES = {
     'functions': {
         'Leitos': lambda df: df['Infected'] * DERIVATIVES['values']['Leitos'],
-        'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
+        #'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
     },
     'values': {
         'Leitos': 0.005,
-        'Ventiladores': 0.25,
+        #'Ventiladores': 0.25,
     },
     'descriptions': {
         'Leitos': 'Número de leitos necessários por infectado',
-        'Ventiladores': 'Número de ventiladores necessários por leito ocupado',
+        #'Ventiladores': 'Número de ventiladores necessários por leito ocupado',
     },
 }
 
@@ -100,32 +101,44 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
     interval_density = 0.95
     family = 'lognorm'
 
+    st.sidebar.markdown('#### Parâmetros da Simulação')
     fator_subr = st.sidebar.number_input(
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
             value=widget_values.get('fator_subr', defaults['fator_subr']))
 
+    asymptomatic_rate = st.sidebar.number_input(
+        "Taxa de assintomáticos em %",
+        min_value=0.0, max_value=99.0, step=0.1,
+        value=defaults['asymptomatic_rate']) / 100
+    
     lethality_mean = st.sidebar.number_input(
             ('Taxa de letalidade (em %).'),
             min_value=0.0, max_value=100.0, step=0.1,
             value=lethality_mean_est)
-
-
+    
+    DERIVATIVES['values']['Leitos'] = st.sidebar.number_input(
+            DERIVATIVES['descriptions']['Leitos'],
+            min_value=0.0, max_value=10.0, step=0.0001,
+            value=DERIVATIVES['values']['Leitos'], format="%.4f"
+        )
+    
+    
     st.sidebar.markdown('#### Condições iniciais')
     N = st.sidebar.number_input('População total (N)',
-                                min_value=0, max_value=1_000_000_000, step=1,
+                                min_value=widget_values.get('N', _N0), max_value=widget_values.get('N', _N0), step=1,
                                 value=widget_values.get('N', _N0))
 
     E0 = st.sidebar.number_input('Indivíduos expostos inicialmente (E0)',
-                                 min_value=0, max_value=1_000_000_000,
+                                 min_value=widget_values.get('E0', _E0), max_value=widget_values.get('E0', _E0),
                                  value=widget_values.get('E0', _E0))
 
     I0 = st.sidebar.number_input('Indivíduos infecciosos inicialmente (I0)',
-                                 min_value=0, max_value=1_000_000_000,
+                                 min_value=widget_values.get('I0', _I0), max_value=widget_values.get('I0', _I0),
                                  value=widget_values.get('I0', _I0))
 
     R0 = st.sidebar.number_input('Indivíduos removidos com imunidade inicialmente (R0)',
-                                 min_value=0, max_value=1_000_000_000,
+                                 min_value=widget_values.get('R0', _R0), max_value=widget_values.get('R0', _R0),
                                  value=widget_values.get('R0', _R0))
 
     st.sidebar.markdown('#### Período de infecção (1/γ) e tempo incubação (1/α)')
@@ -153,11 +166,11 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
     st.sidebar.markdown('#### Parâmetros gerais')
 
     t_max = st.sidebar.number_input('Período de simulação em dias (t_max)',
-                                    min_value=7, max_value=90, step=1,
+                                    min_value=7, max_value=90*3, step=1,
                                     value=widget_values.get('t_max', 90))
 
 
-    return ({'fator_subr': fator_subr,
+    return ({'fator_subr': fator_subr/ (1 - asymptomatic_rate),
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
@@ -313,8 +326,9 @@ def make_EI_derivatives(ei_df, defaults=DERIVATIVES['functions']):
 
 
 def write():
-
+    
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
+    st.markdown(texts.INTRO_MODELO)
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
     w_granularity = st.sidebar.selectbox('Unidade',
                                          options=['country', 'state'],
@@ -373,17 +387,39 @@ def write():
     else:
         r0_dist = make_r0_widgets(widget_values)
         st.markdown(texts.r0_ESTIMATION_DONT)
-
+   
+    
     # Estimativa de Letalidade
     lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
                                                   cases_df[w_place]['totalCases'])
     # Previsão de infectados
 
     w_params, lethality_mean = make_param_widgets(NEIR0, widget_values, lethality_mean_est=lethality_mean_est)
-    make_derivatives_widgets(DERIVATIVES['values'])
+    #make_derivatives_widgets(DERIVATIVES['values'])
 
+    #Definições do modelo
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
+
+    # Parâmetros de simulação
+    dists = [w_params['alpha_inv_dist'],
+             w_params['gamma_inv_dist'],
+             r0_dist]
+    SEIR0 = model._params['init_conditions']
+    params_intro_txt, seir0_dict, other_params_txt = texts.make_SIMULATION_PARAMS(SEIR0, dists,
+                                             should_estimate_r0)
+    # Configurações da simulação
+    st.markdown(texts.SIMULATION_CONFIG)
+    # Explicação dos parâmetros de óbito e leitos
+    st.markdown(texts.DESC_PARAMS_DEATHS)
+    st.markdown(texts.DESC_PARAMS_LEITOS)
+    #Outros parâmetros
+    st.markdown(params_intro_txt)
+    st.write(pd.DataFrame(seir0_dict).set_index("Compartimento"))
+    
+    st.markdown(other_params_txt)
+    
+    
     ei_df = make_EI_df(model, model_output, SAMPLE_SIZE)
     st.markdown(texts.MODEL_INTRO)
     w_scale = st.selectbox('Escala do eixo Y',
@@ -403,24 +439,14 @@ def write():
                              w_params['fator_subr'])
     st.altair_chart(fig_deahts)
     st.markdown(texts.DEATH_DETAIL,unsafe_allow_html=True)
-
+    st.markdown(texts.LEITOS_INTRO)
     derivatives = make_EI_derivatives(ei_df)
     derivatives_chart = plot_derivatives(derivatives, w_date)
     st.altair_chart(derivatives_chart)
+    st.markdown(texts.LEITOS_DETAIL,unsafe_allow_html=True)
+    
 
-    # Parâmetros de simulação
-    dists = [w_params['alpha_inv_dist'],
-             w_params['gamma_inv_dist'],
-             r0_dist]
-    SEIR0 = model._params['init_conditions']
-    params_intro_txt, seir0_dict, other_params_txt = texts.make_SIMULATION_PARAMS(SEIR0, dists,
-                                             should_estimate_r0)
-    st.markdown(params_intro_txt)
-    st.write(pd.DataFrame(seir0_dict).set_index("Compartimento"))
-    st.markdown(other_params_txt)
-
-    # Configurações da simulação
-    st.markdown(texts.SIMULATION_CONFIG)
+    
     # Fontes dos dados
     st.markdown(texts.DATA_SOURCES)
 

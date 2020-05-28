@@ -19,10 +19,31 @@ Para simular outros cenários, altere um parâmetro e tecle **Enter**. O novo re
 '''
 
 MODEL_INTRO='''
+---
+## Simuladores
 ### Previsão de expostos e infectados
-O gráfico abaixo mostra o resultado da simulação da evolução de pacientes expostos e infectados para os parâmetros selecionados. Mais informações sobre este modelo estão disponíveis [aqui](https://github.com/3778/COVID-19#seir-bayes).
+O gráfico abaixo mostra o resultado da simulação da evolução de pacientes expostos e infectados para os parâmetros selecionados. Mais informações sobre este modelo estão disponíveis [aqui](https://github.com/bigdata-icict/COVID-19#seir-bayes).
 
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
+'''
+PARAMS_LEITOS='''
+#### Parâmetros de Leitos
+
+'''
+DESC_PARAMS_LEITOS='''
+### Parâmetros da previsão de leitos
+* A Taxa de internação  é utilizada para a simulação do comportamento das curvas de demanda de leitos.
+'''
+
+DESC_PARAMS_DEATHS = '''
+### Parâmetros da previsão de óbitos
+* O valor da taxa pode ser alterado com o parâmetro Taxa de letalidade (em %, proporção dos casos que resultam em óbito).
+'''
+
+INTRO_MODELO='''
+## Introdução ao modelo
+### Nota Técnica
+[Clique aqui para acessar a nóta técnica do modelo SEIR-Bayes e a estimação do número básico de reprodução](https://github.com/3778/COVID-19/raw/master/nota-tecnica.pdf)
 '''
 
 DEATHS_INTRO='''
@@ -37,11 +58,25 @@ DEATH_DETAIL='''
     <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
     <div style="color: rgb(38, 39, 48);">
         <p>A estimativa de óbitos é calculada multiplicando-se o número de casos estimados por uma taxa de letalidade. Como padrão, essa taxa é calculada a partir dos casos e óbitos oficialmente registrados no nível geográfico selecionado.</p>
-        <p>O valor da taxa pode ser alterado com o parâmetro Taxa de letalidade (em %, proporção dos casos que resultam em óbito).</p>
     </div>
 </details>
 '''
 
+LEITOS_INTRO='''
+### Previsão da demanda de leitos
+
+O gráfico abaixo mostra a estimativa da demanda de leitos acumulada para os parâmetros selecionados. O cálculo é realizado a partir da aplicação de umataxa de internação.
+(!) Importante: Os resultados apresentados são preliminares e estão em fase de validação.
+'''
+
+LEITOS_DETAIL='''
+<details>
+    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);">
+        <p>A demanda de leitos é calculada a partir da incidência de infectados e a taxa de internação, ou seja, a proporção de indivíduos que necessitam ser internados.</p>
+    </div>
+</details>
+'''
 def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     alpha_inv_inf, alpha_inv_sup, _, _ = intervals[0]
     gamma_inv_inf, gamma_inv_sup, _, _ = intervals[1]
@@ -53,9 +88,8 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
         r0_txt = '- $$R_{{0}}$$ está sendo estimado com dados históricos'
 
     intro_txt = '''
-    ---
 
-    ### Parâmetros da simulação
+    ### Outros Parâmetros 
 
     Valores iniciais dos compartimentos:
     '''
@@ -82,9 +116,8 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     '''
     return intro_txt, seir0_dict, other_params_txt
 
-SIMULATION_CONFIG = '''
----
 
+SIMULATION_CONFIG = '''
 ### Configurações da  simulação (menu à esquerda)
 
 #### Seleção Brasil ou UF
@@ -107,11 +140,15 @@ DATA_SOURCES = '''
 * [Early Transmission Dynamics in Wuhan, China, of Novel Coronavirus–Infected Pneumonia](https://www.nejm.org/doi/full/10.1056/NEJMoa2001316)
 * [Estimation of the reproductive number of novel coronavirus (COVID-19) and the probable outbreak size on the Diamond Princess cruise ship: A data-driven analysis](https://www.ijidonline.com/article/S1201-9712(20)30091-6/fulltext)
 * [MIDAS Online Portal for COVID-19 Modeling Research](https://midasnetwork.us/covid-19/#resources)
-### Note Técnica
-[Clique aqui para acessar a nóta técnica do modelo SEIR-Bayes e a estimação do número básico de reprodução](https://github.com/3778/COVID-19/blob/master/nota-tecnica.pdf)
+
 '''
 
-r0_ESTIMATION_TITLE = '### Número de reprodução básico $R_{{0}}$'
+r0_ESTIMATION_TITLE = '''
+---
+
+### Número de reprodução básico $R_{{0}}$
+
+'''
 
 def r0_ESTIMATION(place, date): return  f'''
 O número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place}. O valor utilizado no modelo SEIR-Bayes é o do dia {date}, que é o mais recente.
