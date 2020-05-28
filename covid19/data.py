@@ -15,7 +15,7 @@ COVID_SAUDE_URL = ('https://raw.githubusercontent.com/3778/COVID-19/'
 
 FIOCRUZ_URL = 'https://bigdata-covid19.icict.fiocruz.br/sd/dados_casos.csv'
 
-SRAG_PATH=DATA_DIR / 'srag_filtered.csv'
+LETHALITY_PATH=DATA_DIR / 'lethality_rates.csv'
 
 def _prepare_fiocruz_data(df, by):
     if by == 'country':
@@ -196,28 +196,9 @@ def load_age_group_rate(granularity):
               .assign(Idoso= lambda df: df['60 anos ou mais']/df['Total'])
               .drop(df.columns[0:7], axis=1))
 
-def group_srag(df, by):
-    return (df.groupby(by)['obito']
-                    .agg(['sum', 'count'])
-                    .reset_index()
-                    .rename(columns={'sum': 'obitos',
-                                     'count': 'casos'})
-                    .assign(letalidade=lambda df: df.obitos/df.casos)
-                    .set_index(by, drop=True)
-                    .unstack('CLASSI_FIN')
-                    .fillna(0)
-                    .rename(columns={1: 'SRAG_Influenza',
-                                     2: 'SRAG_outro_virus',
-                                     3: 'SRAG_outro_etiologico',
-                                     4: 'SRAG_nao_especificado',
-                                     5: 'COVID19'}))
-
-def load_srag_lethality_rate(granularity):
-    assert granularity in ["state", "country"]
-    df = pd.read_csv(SRAG_PATH)
-    if granularity == 'country':
-        to_group = ['faixa_etaria', 'CLASSI_FIN']
-    else:
-        to_group = ['SG_UF_INTE', 'faixa_etaria', 'CLASSI_FIN']
-
-    return (group_srag(df, to_group))
+def load_lethality_rate():
+    return (pd.read_csv(LETHALITY_PATH)
+              .set_index('state')
+              .rename(columns={'adult_lethality': 'Adulto',
+                               'elder_lethality': 'Idoso',
+                               'young_lethality': 'Jovem'}))

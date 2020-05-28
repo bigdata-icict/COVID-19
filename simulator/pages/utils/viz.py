@@ -213,38 +213,6 @@ def make_death_chart(data, scale="log", show_uncertainty=True):
         .configure_legend(labelFontSize=14, titleFontSize=14)
     )
 
-def make_new_death_chart(data, scale="log"):
-    lines = (
-        alt.Chart(
-            data,
-            width=600,
-            height=400,
-            title="Evolução do total de óbitos causados pelo COVID-19",
-        )
-        .mark_line(color=plot_params['obito']['color'])
-        .transform_fold(
-            ["Óbito_mean_internacao"],
-            ["Variável", "Valor"]  # equivalent to id_vars in pandas" melt
-        )
-        .encode(
-            x=alt.X("Datas:T", axis=alt.Axis(title="Data", labelSeparation=3)),
-            y=alt.Y("Valor:Q", title="Qtde. de pessoas", scale=alt.Scale(type=scale)),
-            #color="Variável:N"
-        )
-    )
-
-    output = alt.layer(lines)
-
-    return (
-        alt.vconcat(
-            output.interactive(),
-            padding={"top": 20}
-        )
-        .configure_title(fontSize=16)
-        .configure_axis(labelFontSize=14, titleFontSize=14)
-        .configure_legend(labelFontSize=14, titleFontSize=14)
-    )
-
 def plot_r0(r0_samples, date, place, min_days):
     r0_samples_cut = r0_samples[-min_days:]
     columns = pd.date_range(end=date, periods=r0_samples_cut.shape[1])
