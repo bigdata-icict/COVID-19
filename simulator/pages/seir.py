@@ -101,8 +101,11 @@ def make_date_options(cases_df, place):
             .strftime('%Y-%m-%d'))
 
 
-def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
+def make_param_widgets(NEIR0, widget_values,
+                       lethality_rate_by_age,
+                       lethality_mean_est,
                        r0_samples=None, defaults=DEFAULT_PARAMS):
+
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
@@ -114,20 +117,31 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
             value=defaults['fator_subr'])
-    
+
     asymptomatic_rate = hideable(st.sidebar.number_input,
                           show=not('asymptomatic_rate' in widget_values),
                           hidden_value=widget_values.get('asymptomatic_rate'))(
             ('Taxa de assintomáticos em %'),
             min_value=0.0, max_value=99.0, step=0.1,
             value=defaults['asymptomatic_rate'])/ 100
-    lethality_mean = hideable(st.sidebar.number_input,
-                              show=not('lethality_mean' in widget_values),
-                              hidden_value=widget_values.get('lethality_mean'))(
-            ('Taxa de letalidade (em %).'),
-            min_value=0.0, max_value=100.0, step=0.1,
-            value=lethality_mean_est)
-    
+
+    risk_factor = st.sidebar.checkbox("Aplicar fator de risco à letalidade")
+    if not risk_factor:
+        lethality_mean = hideable(st.sidebar.number_input,
+                                  show=not('lethality_mean' in widget_values),
+                                  hidden_value=widget_values.get('lethality_mean'))(
+                ('Taxa de letalidade (em %).'),
+                min_value=0.0, max_value=100.0, step=0.1,
+                value=lethality_mean_est)
+    else:
+        st.write("### Utilizando taxa de letalidade ponderada por faixa etária")
+        lethality_mean = hideable(st.sidebar.number_input,
+                                  show=not('lethality_rate_by_age' in widget_values),
+                                  hidden_value=widget_values.get('lethality_rate_by_age'))(
+                ('Taxa de letalidade combinada (em %).'),
+                min_value=0.0, max_value=100.0, step=0.1,
+                value=lethality_rate_by_age)
+
     for derivative in DERIVATIVES['descriptions']:
         DERIVATIVES['values'][derivative] = hideable(
             st.sidebar.number_input,
@@ -211,7 +225,8 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)},
-            lethality_mean)
+            lethality_mean,
+            risk_factor)
 
 
 def make_derivatives_widgets(defaults, widget_values):
@@ -335,6 +350,17 @@ def estimate_lethality_mean(cases_death, cases_covid):
     lethality_mean = float((cases_death / cases_covid).mean()) * 100
     return lethality_mean
 
+def compute_lethality_by_age(w_granularity, w_place):
+    age_groups = data.load_age_group_rate(w_granularity).loc[w_place]
+    leth_rates_df = data.load_lethality_rate()
+    show_leth_rate_message = False
+    if w_place not in leth_rates_df.index:
+        leth_rates_place = leth_rates_df.loc['Brasil'][['Adulto', 'Idoso', 'Jovem']]
+        show_leth_rate_message = True
+    else:
+        leth_rates_place = leth_rates_df.loc[w_place][['Adulto', 'Idoso', 'Jovem']]
+    lethality_rate_by_age = sum([age_groups[group]*leth_rates_place[group] for group in leth_rates_place.index]) * 100
+    return lethality_rate_by_age, show_leth_rate_message
 
 
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
@@ -369,7 +395,7 @@ def make_EI_derivatives(ei_df, defaults=DERIVATIVES['functions']):
 
 
 def write():
-    
+
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.markdown(texts.INTRO_MODELO)
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
@@ -438,13 +464,17 @@ def write():
     else:
         r0_dist = make_r0_widgets(widget_values)
         st.markdown(texts.r0_ESTIMATION_DONT)
-   
-    
+
+
     # Estimativa de Letalidade
+    lethality_rate_by_age, show_leth_rate_message = compute_lethality_by_age(w_granularity, w_place)
     lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
                                                   cases_df[w_place]['totalCases'])
     # Previsão de infectados
-    w_params, lethality_mean = make_param_widgets(NEIR0, widget_values, lethality_mean_est=lethality_mean_est)
+    w_params, lethality_mean, risk_factor = make_param_widgets(NEIR0,
+                                                  widget_values,
+                                                  lethality_rate_by_age,
+                                                  lethality_mean_est=lethality_mean_est)
     #make_derivatives_widgets(DERIVATIVES['values'])
 
     #Definições do modelo
@@ -466,10 +496,10 @@ def write():
     #Outros parâmetros
     st.markdown(params_intro_txt)
     st.write(pd.DataFrame(seir0_dict).set_index("Compartimento"))
-    
+
     st.markdown(other_params_txt)
-    
-    
+
+
     ei_df = make_EI_df(model, model_output, SAMPLE_SIZE)
     st.markdown(texts.MODEL_INTRO)
     w_scale = st.selectbox('Escala do eixo Y',
@@ -485,6 +515,11 @@ def write():
 
     # Plot Deaths
     st.markdown(texts.DEATHS_INTRO)
+    if show_leth_rate_message & risk_factor:
+        st.markdown(
+        f"**Este estado não apresentou dados de faixa etária."
+        f" Por isso, são usados dados do Brasil para estimar as taxas de letalidade.**"
+    )
     fig_deahts = plot_deaths(model_output, 'linear', w_date, lethality_mean,
                              w_params['fator_subr'])
     st.altair_chart(fig_deahts)
@@ -494,9 +529,9 @@ def write():
     derivatives_chart = plot_derivatives(derivatives, w_date)
     st.altair_chart(derivatives_chart)
     st.markdown(texts.LEITOS_DETAIL,unsafe_allow_html=True)
-    
 
-    
+
+
     # Fontes dos dados
     st.markdown(texts.DATA_SOURCES)
 

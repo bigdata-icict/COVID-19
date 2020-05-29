@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import itertools
+import requests
 from covid19.utils import state2initial
 
 DATA_DIR = Path(__file__).resolve().parents[1] / 'data'
@@ -13,6 +14,8 @@ COVID_SAUDE_URL = ('https://raw.githubusercontent.com/3778/COVID-19/'
                    'master/data/latest_cases_ms.csv')
 
 FIOCRUZ_URL = 'https://bigdata-covid19.icict.fiocruz.br/sd/dados_casos.csv'
+
+LETHALITY_PATH=DATA_DIR / 'lethality_rates.csv'
 
 
 def _prepare_fiocruz_data(df, by):
@@ -75,7 +78,7 @@ def load_cases(by, source='fiocruz'):
                 .rename(columns={'casosNovos': 'newCases',
                                  'casosAcumulados': 'totalCases',
                                  'estado': 'state'}))
-       
+
     if source == 'ms':
         assert by == 'state'
         df = (pd.read_csv(COVID_SAUDE_URL,
@@ -154,3 +157,47 @@ def load_population(by):
                    ['estimated_population']
                    .sum()
                    .sort_index())
+
+def prepare_age_data(level, old_col, new_col):
+    BASE_URL = "http://api.sidra.ibge.gov.br/values/t/5918/p/201904/v/606/C58/all/f/n"
+    url = f"{BASE_URL}{level}"
+    r = requests.get(url)
+    df = pd.read_json(r.text)
+    df = (
+        df.rename(columns=df.iloc[0])
+        .drop(df.index[0])
+        .drop(columns=["Nível Territorial", "Trimestre", "Variável", "Unidade de Medida"])
+        .rename(columns={"Grupo de idade": "g_idade", old_col: new_col})
+    )
+    df = df.pivot(new_col, columns="g_idade")["Valor"].reset_index()
+    df.columns.name = None
+    return df
+
+def load_age_group_rate(granularity):
+    assert granularity in ["state", "country"]
+    if granularity == "state":
+        df = (
+            prepare_age_data("/N3/all", "Unidade da Federação", "state")
+            .replace({"state": state2initial})
+            .set_index("state")
+            .astype(int)
+        )
+    else:
+        df = (
+            prepare_age_data("/N1/all", "Brasil", "country")
+            .assign(country=lambda df: df["country"].str.replace(" - ", "/"))
+            .set_index(granularity)
+            .astype(int)
+
+        )
+    return (df.assign(Jovem= lambda df: (df['0 a 13 anos'] + df['14 a 17 anos'])/df['Total'])
+              .assign(Adulto= lambda df: (df['18 a 24 anos'] + df['25 a 39 anos'] + df['40 a 59 anos'])/df['Total'])
+              .assign(Idoso= lambda df: df['60 anos ou mais']/df['Total'])
+              .drop(df.columns[0:7], axis=1))
+
+def load_lethality_rate():
+    return (pd.read_csv(LETHALITY_PATH)
+              .set_index('state')
+              .rename(columns={'adult_lethality': 'Adulto',
+                               'elder_lethality': 'Idoso',
+                               'young_lethality': 'Jovem'}))
