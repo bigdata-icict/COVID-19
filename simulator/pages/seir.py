@@ -295,8 +295,8 @@ def plot_EI(model_output, scale, start_date):
 def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
     _, _, _, R, t = model_output
     R /= subnotification_factor
-    #R *= (lethality_mean/100)
-    source = prep_death_data_to_plot(R, t, start_date, lethality_mean)
+    R *= (lethality_mean/100)
+    source = prep_death_data_to_plot(R, t, start_date)
     return make_death_chart(source,
                             scale=scale,
                             show_uncertainty=True)
@@ -336,10 +336,9 @@ def estimate_lethality_mean(cases_death, cases_covid):
 
 
 @st.cache(show_spinner=False)
-def estimate_lethality_ewm(leth, ewm_params_d):
-    lethality_mean = leth.ewm(com=ewm_params_d["halflife"]).mean().iloc[-1]
-    return float(lethality_mean) * 100
-
+def estimate_lethality_ewm(cases_death, cases_covid):
+    death_rate = float((cases_death/cases_covid).ewm(halflife=7).mean().iloc[-1])
+    return death_tax * 100
 
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     r0_inf = hideable(st.number_input,
@@ -447,9 +446,8 @@ def write():
     # Estimativa de Letalidade
     #lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
     #                                              cases_df[w_place]['totalCases'])
-    leth = cases_df[w_place]["deaths"] / cases_df[w_place]["totalCases"]
-    ewm_params_d = {"halflife": 7}
-    lethality_mean_est = estimate_lethality_ewm(leth, ewm_params_d)
+    lethality_mean_est = estimate_lethality_ewm(cases_df[w_place]["deaths"],
+                                                cases_df[w_place]["totalCases"])
 
     # Previsão de infectados
     w_params, lethality_mean = make_param_widgets(NEIR0, widget_values, lethality_mean_est=lethality_mean_est)
