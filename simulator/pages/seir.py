@@ -101,8 +101,7 @@ def make_date_options(cases_df, place):
             .strftime('%Y-%m-%d'))
 
 
-def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
-                       r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, widget_values, r0_samples=None, defaults=DEFAULT_PARAMS):
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
@@ -114,6 +113,8 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
             value=defaults['fator_subr'])
+
+    lethality_mean_place = st.sidebar.empty()
     
     asymptomatic_rate = hideable(st.sidebar.number_input,
                           show=not('asymptomatic_rate' in widget_values),
@@ -121,12 +122,6 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
             ('Taxa de assintomáticos em %'),
             min_value=0.0, max_value=99.0, step=0.1,
             value=defaults['asymptomatic_rate'])/ 100
-    lethality_mean = hideable(st.sidebar.number_input,
-                              show=not('lethality_mean' in widget_values),
-                              hidden_value=widget_values.get('lethality_mean'))(
-            ('Taxa de letalidade (em %).'),
-            min_value=0.0, max_value=100.0, step=0.1,
-            value=lethality_mean_est)
     
     for derivative in DERIVATIVES['descriptions']:
         DERIVATIVES['values'][derivative] = hideable(
@@ -211,7 +206,7 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)},
-            lethality_mean)
+            lethality_mean_place)
 
 
 def make_derivatives_widgets(defaults, widget_values):
@@ -302,6 +297,15 @@ def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification
                             show_uncertainty=True)
 
 
+def make_death_widget(lethality_mean_est, lethality_mean_place, widget_values):
+    lethality_mean = hideable(lethality_mean_place.number_input,
+                              show=not('lethality_mean' in widget_values),
+                              hidden_value=widget_values.get('lethality_mean'))(
+            ('Taxa de letalidade (em %).'),
+            min_value=0.0, max_value=100.0, step=0.1,
+            value=lethality_mean_est)
+    return lethality_mean
+
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     used_brazil = False
 
@@ -338,7 +342,7 @@ def estimate_lethality_mean(cases_death, cases_covid):
 @st.cache(show_spinner=False)
 def estimate_lethality_ewm(cases_death, cases_covid):
     death_rate = float((cases_death/cases_covid).ewm(halflife=7).mean().iloc[-1])
-    return death_tax * 100
+    return death_rate * 100
 
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     r0_inf = hideable(st.number_input,
@@ -443,14 +447,8 @@ def write():
         st.markdown(texts.r0_ESTIMATION_DONT)
    
     
-    # Estimativa de Letalidade
-    #lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
-    #                                              cases_df[w_place]['totalCases'])
-    lethality_mean_est = estimate_lethality_ewm(cases_df[w_place]["deaths"],
-                                                cases_df[w_place]["totalCases"])
-
     # Previsão de infectados
-    w_params, lethality_mean = make_param_widgets(NEIR0, widget_values, lethality_mean_est=lethality_mean_est)
+    w_params, lethality_mean_place = make_param_widgets(NEIR0, widget_values)
     #make_derivatives_widgets(DERIVATIVES['values'])
 
     #Definições do modelo
@@ -489,8 +487,25 @@ def write():
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
 
-    # Plot Deaths
+    # Deaths
     st.markdown(texts.DEATHS_INTRO)
+
+    # Estimativa de Letalidade
+    should_lethality_ewm = st.checkbox(
+            'Calcular taxa de letalidade por média móvel',
+            value=True)
+    if should_lethality_ewm:
+        lethality_mean_est = estimate_lethality_ewm(cases_df[w_place]["deaths"],
+                                                    cases_df[w_place]["totalCases"])
+    else:
+        lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
+                                                      cases_df[w_place]['totalCases'])
+    
+    # Make param
+    lethality_mean = make_death_widget(lethality_mean_est,
+            lethality_mean_place, widget_values)
+
+    # Plot Deaths
     fig_deahts = plot_deaths(model_output, 'linear', w_date, lethality_mean,
                              w_params['fator_subr'])
     st.altair_chart(fig_deahts)
