@@ -336,11 +336,13 @@ def estimate_r0(cases_df, place, sample_size, min_days, w_date):
 
 def estimate_lethality(cases_death, cases_covid, is_ewm):
     if is_ewm:
-        lethality_mean =(float((cases_death/cases_covid).ewm(halflife=7).mean().iloc[-1])
-                        * 100
-        )
-    else:
-        lethality_mean = float((cases_death / cases_covid).mean()) * 100
+        lethality_mean = (
+            cases_death
+            .div(cases_covid)
+            .ewm(halflife=7)
+            .mean()
+            .iloc[-1]
+        ) * 100
 
     return lethality_mean
 
