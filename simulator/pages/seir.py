@@ -343,8 +343,13 @@ def estimate_lethality(cases_death, cases_covid, is_ewm):
             .mean()
             .iloc[-1]
         ) * 100
+    else:
+        lethality_mean = (
+            cases_death.iloc[-1]
+            / cases_covid.iloc[-1]
+        ) * 100
 
-    return lethality_mean
+    return float(lethality_mean)
 
 
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
