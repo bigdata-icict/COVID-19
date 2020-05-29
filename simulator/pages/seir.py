@@ -334,15 +334,16 @@ def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     return samples, used_brazil
 
 
-def estimate_lethality_mean(cases_death, cases_covid):
-    lethality_mean = float((cases_death / cases_covid).mean()) * 100
+def estimate_lethality(cases_death, cases_covid, type_est, is_ewm):
+    if is_ewm:
+        lethality_mean =(float((cases_death/cases_covid).ewm(halflife=7).mean().iloc[-1])
+                        * 100
+        )
+    else:
+        lethality_mean = float((cases_death / cases_covid).mean()) * 100
+
     return lethality_mean
 
-
-@st.cache(show_spinner=False)
-def estimate_lethality_ewm(cases_death, cases_covid):
-    death_rate = float((cases_death/cases_covid).ewm(halflife=7).mean().iloc[-1])
-    return death_rate * 100
 
 def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     r0_inf = hideable(st.number_input,
@@ -491,16 +492,12 @@ def write():
     st.markdown(texts.DEATHS_INTRO)
 
     # Estimativa de Letalidade
-    should_lethality_ewm = st.checkbox(
+    is_ewm = st.checkbox(
             'Calcular taxa de letalidade por média móvel',
             value=True)
-    if should_lethality_ewm:
-        lethality_mean_est = estimate_lethality_ewm(cases_df[w_place]["deaths"],
-                                                    cases_df[w_place]["totalCases"])
-    else:
-        lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
-                                                      cases_df[w_place]['totalCases'])
-    
+    lethality_mean_est = estimate_lethality_ewm(cases_df[w_place]["deaths"],
+                                                cases_df[w_place]["totalCases"],
+                                                is_ewm)
     # Make param
     lethality_mean = make_death_widget(lethality_mean_est,
             lethality_mean_place, widget_values)
