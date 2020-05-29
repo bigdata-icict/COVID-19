@@ -77,7 +77,24 @@ def prep_tidy_data_to_plot(E, I, t_space, start_date):
     return data
 
 
-def prep_death_data_to_plot(R, t_space, start_date):
+def prep_death_data_to_plot(R, t_space, start_date, lethality_mean):
+
+    lethality_mean /= 100
+    def _poisson(data):
+        # e = np.e,
+        # lambda = lethality_mean (Probability of deafults deaths),
+        # k = periodo (Time period of occurrence)
+        k = data['Dias']
+        lamb = lethality_mean
+        prob = (((np.e ** lamb) * (lamb**k))
+                / np.math.factorial(k))
+        print("============================")
+        print(prob)
+        print(prob * lethality_mean)
+        data.iloc[1:-1] *= prob * lethality_mean
+        return data
+
+
     df_R = unstack_iterations_ndarray(R, t_space, plot_params["obito"]["name"])
     
     agg_df_R = compute_mean_and_boundaries(df_R, plot_params["obito"]["name"])
@@ -89,6 +106,11 @@ def prep_death_data_to_plot(R, t_space, start_date):
     start_datetime = pd.to_datetime(start_date)
     dates = [start_datetime + timedelta(offset) for offset in data['Dias']]
     data["Datas"] = dates
+
+    # Apply Poisson method
+    #print(data)
+    data = data.apply(_poisson, axis=1)
+    #print(data)
 
     return data
 
