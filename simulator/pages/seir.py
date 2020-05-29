@@ -125,7 +125,7 @@ def make_param_widgets(NEIR0, widget_values,
             min_value=0.0, max_value=99.0, step=0.1,
             value=defaults['asymptomatic_rate'])/ 100
 
-    risk_factor = st.sidebar.checkbox("Aplicar fator de risco à letalidade")
+    risk_factor = st.sidebar.checkbox("Ponderar letalidade por faixa etária")
     if not risk_factor:
         lethality_mean = hideable(st.sidebar.number_input,
                                   show=not('lethality_mean' in widget_values),
