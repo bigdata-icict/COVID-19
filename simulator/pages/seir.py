@@ -296,6 +296,7 @@ def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification
     _, _, _, R, t = model_output
     R /= subnotification_factor
     R *= (lethality_mean/100)
+    R = np.diff(R, axis=0, prepend=0)
     source = prep_death_data_to_plot(R, t, start_date)
     return make_death_chart(source,
                             scale=scale,
