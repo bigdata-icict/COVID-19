@@ -9,6 +9,7 @@ COVID_19_BY_CITY_URL=('https://raw.githubusercontent.com/wcota/covid19br/'
                       'master/cases-brazil-cities-time.csv')
 IBGE_POPULATION_PATH=DATA_DIR / 'ibge_population.csv'
 WORLD_POPULATION_PATH=DATA_DIR / 'country_population.csv'
+SRAG_SUBNOTIFICATION_PATH= DATA_DIR / 'srag_death_subnotification.csv'
 COVID_SAUDE_URL = ('https://raw.githubusercontent.com/3778/COVID-19/'
                    'master/data/latest_cases_ms.csv')
 
@@ -154,3 +155,11 @@ def load_population(by):
                    ['estimated_population']
                    .sum()
                    .sort_index())
+
+def load_srag_death_subnotification():
+    return (
+        pd.read_csv(SRAG_SUBNOTIFICATION_PATH)
+        .set_index('state')
+        .to_dict()
+        ['death_subnotification']
+    )
