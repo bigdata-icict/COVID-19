@@ -214,6 +214,13 @@ def make_param_widgets(NEIR0, widget_values, lethality_mean_est,
             lethality_mean)
 
 
+def make_death_subr_widget(defaults, place):
+    return st.sidebar.number_input(
+        ('Fator de subnotificação de óbitos'),
+        min_value=0.0, max_value=100.0, step=0.1,
+        value=defaults.get(place, 1.0)
+    )
+
 @st.cache
 def make_NEIR0(cases_df, population_df, place, date):
     N0 = population_df[place]
@@ -284,6 +291,7 @@ def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification
     _, _, _, R, t = model_output
     R /= subnotification_factor
     R *= (lethality_mean/100)
+    R = np.diff(R, axis=0, prepend=0)
     source = prep_death_data_to_plot(R, t, start_date)
     return make_death_chart(source,
                             scale=scale,
@@ -369,6 +377,7 @@ def write():
 
     cases_df = data.load_cases(w_granularity, 'fiocruz')
     population_df = data.load_population(w_granularity)
+    srag_death_subnotification = data.load_srag_death_subnotification()
 
     DEFAULT_PLACE = (DEFAULT_STATE if w_granularity == 'state' else
                      DEFAULT_COUNTRY)
@@ -399,6 +408,7 @@ def write():
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
                                   index=len(options_date)-1)
+    death_subnotification = make_death_subr_widget(srag_death_subnotification, w_place)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
 
     # Estimativa R0
@@ -474,9 +484,10 @@ def write():
 
     # Plot Deaths
     st.markdown(texts.DEATHS_INTRO)
-    fig_deahts = plot_deaths(model_output, 'linear', w_date, lethality_mean,
+    fig_deaths = plot_deaths(model_output, 'linear', w_date,
+                             lethality_mean * death_subnotification,
                              w_params['fator_subr'])
-    st.altair_chart(fig_deahts)
+    st.altair_chart(fig_deaths)
     st.markdown(texts.DEATH_DETAIL,unsafe_allow_html=True)
     st.markdown(texts.LEITOS_INTRO)
     derivatives = make_EI_derivatives(ei_df, w_params['fator_subr'])
