@@ -24,22 +24,22 @@ DEFAULT_COUNTRY = 'Brasil'
 DEFAULT_PARAMS = {
     'fator_subr': 1.0,
     'asymptomatic_rate': 50.0,
-    'Leitos': 0.005,
+    'Leitos': 20.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 }
 DERIVATIVES = {
     'functions': {
-        'Leitos': lambda df: df['Infected'] * DERIVATIVES['values']['Leitos'],
+        'Leitos': lambda df: df['Infected'] * (DERIVATIVES['values']['Leitos'] / 100)
         #'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
     },
     'values': {
-        'Leitos': 0.005,
+        'Leitos': 20.0,
         #'Ventiladores': 0.25,
     },
     'descriptions': {
-        'Leitos': 'Número de leitos necessários por infectado',
+        'Leitos': 'Taxa de internação dos casos notificados em %',
         #'Ventiladores': 'Número de ventiladores necessários por leito ocupado',
     },
 }
@@ -100,11 +100,16 @@ def make_date_options(cases_df, place):
             .index
             .strftime('%Y-%m-%d'))
 
+def make_death_widget(lethality_mean_est, lethality_mean_place, widget_values):
+    lethality_mean = hideable(lethality_mean_place.number_input,
+                              show=not('lethality_mean' in widget_values),
+                              hidden_value=widget_values.get('lethality_mean'))(
+            ('Taxa de letalidade (em %).'),
+            min_value=0.0, max_value=100.0, step=0.1,
+            value=lethality_mean_est)
+    return lethality_mean
 
-def make_param_widgets(NEIR0, widget_values,
-                       lethality_rate_by_age,
-                       lethality_mean_est,
-                       r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, widget_values, r0_samples=None, defaults=DEFAULT_PARAMS):
 
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
@@ -125,22 +130,12 @@ def make_param_widgets(NEIR0, widget_values,
             min_value=0.0, max_value=99.0, step=0.1,
             value=defaults['asymptomatic_rate'])/ 100
 
-    risk_factor = st.sidebar.checkbox("Utilizar taxa de letalidade por faixa etária")
-    if not risk_factor:
-        lethality_mean = hideable(st.sidebar.number_input,
-                                  show=not('lethality_mean' in widget_values),
-                                  hidden_value=widget_values.get('lethality_mean'))(
-                ('Taxa de letalidade (em %).'),
-                min_value=0.0, max_value=100.0, step=0.1,
-                value=lethality_mean_est)
-    else:
-        st.write("### Utilizando taxa de letalidade ponderada por faixa etária")
-        lethality_mean = hideable(st.sidebar.number_input,
-                                  show=not('lethality_rate_by_age' in widget_values),
-                                  hidden_value=widget_values.get('lethality_rate_by_age'))(
-                ('Taxa de letalidade combinada (em %).'),
-                min_value=0.0, max_value=100.0, step=0.1,
-                value=lethality_rate_by_age)
+    lethality_options = ['leth_est', 'leth_age', 'leth_ewm']
+    lethality_type = st.sidebar.selectbox("Selecione tipo de taxa de letalidade",
+                                          options=lethality_options,
+                                          index=0,
+                                          format_func=global_format_func)
+    lethality_mean_place = st.sidebar.empty()
 
     for derivative in DERIVATIVES['descriptions']:
         DERIVATIVES['values'][derivative] = hideable(
@@ -148,8 +143,8 @@ def make_param_widgets(NEIR0, widget_values,
             show=not(derivative in widget_values),
             hidden_value=widget_values.get(derivative))(
             DERIVATIVES['descriptions'][derivative],
-            min_value=0.0, max_value=10.0, step=0.0001,
-            value=defaults[derivative], format="%.4f"
+            min_value=0.0, max_value=100.0, step=0.01,
+            value=defaults[derivative],
         )
 
 
@@ -225,21 +220,16 @@ def make_param_widgets(NEIR0, widget_values,
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)},
-            lethality_mean,
-            risk_factor)
+            lethality_mean_place,
+            lethality_type)
 
 
-def make_derivatives_widgets(defaults, widget_values):
-    for derivative in DERIVATIVES['descriptions']:
-        DERIVATIVES['values'][derivative] = hideable(
-            st.sidebar.number_input,
-            show=not(derivative in widget_values),
-            hidden_value=widget_values.get(derivative))(
-            DERIVATIVES['descriptions'][derivative],
-            min_value=0.0, max_value=10.0, step=0.0001,
-            value=defaults[derivative], format="%.4f"
-        )
-
+def make_death_subr_widget(defaults, place):
+    return st.sidebar.number_input(
+        ('Fator de subnotificação de óbitos'),
+        min_value=0.0, max_value=100.0, step=0.1,
+        value=defaults.get(place, 1.0)
+    )
 
 @st.cache
 def make_NEIR0(cases_df, population_df, place, date):
@@ -306,11 +296,33 @@ def plot_EI(model_output, scale, start_date):
                                scale=scale,
                                show_uncertainty=True)
 
+def estimate_lethality(cases_death, cases_covid, w_granularity, w_place, lethality_type):
+    show_leth_rate_message = False
+    if lethality_type == 'leth_ewm':
+        lethality_mean = (
+            cases_death
+            .div(cases_covid)
+            .ewm(halflife=7)
+            .mean()
+            .iloc[-1]
+        ) * 100
+
+    if lethality_type == 'leth_est':
+        lethality_mean = (
+            cases_death.iloc[-1]
+            / cases_covid.iloc[-1]
+        ) * 100
+
+    if lethality_type == 'leth_age':
+        lethality_mean, show_leth_rate_message = compute_lethality_by_age(w_granularity, w_place)
+
+    return (float(lethality_mean), show_leth_rate_message)
 
 def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
     _, _, _, R, t = model_output
     R /= subnotification_factor
     R *= (lethality_mean/100)
+    R = np.diff(R, axis=0, prepend=0)
     source = prep_death_data_to_plot(R, t, start_date)
     return make_death_chart(source,
                             scale=scale,
@@ -344,12 +356,6 @@ def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     samples = Rt.sample_from_posterior(sample_size=sample_size)
     return samples, used_brazil
 
-
-
-def estimate_lethality_mean(cases_death, cases_covid):
-    lethality_mean = float((cases_death / cases_covid).mean()) * 100
-    return lethality_mean
-
 def compute_lethality_by_age(w_granularity, w_place):
     age_groups = data.load_age_group_rate(w_granularity).loc[w_place]
     leth_rates_df = data.load_lethality_rate()
@@ -380,7 +386,7 @@ def make_r0_widgets(widget_values, defaults=DEFAULT_PARAMS):
     return (r0_inf, r0_sup, .95, 'lognorm')
 
 
-def make_EI_derivatives(ei_df, defaults=DERIVATIVES['functions']):
+def make_EI_derivatives(ei_df, subnotification_factor, defaults=DERIVATIVES['functions']):
     ei_cols = ['Infected', 'Exposed']
 
     return (
@@ -388,6 +394,7 @@ def make_EI_derivatives(ei_df, defaults=DERIVATIVES['functions']):
         .groupby('day')
         [ei_cols]
         .mean()
+        .div(subnotification_factor)
         .assign(**defaults)
         .reset_index()
         .drop(ei_cols, axis=1)
@@ -406,6 +413,7 @@ def write():
 
     cases_df = data.load_cases(w_granularity, 'fiocruz')
     population_df = data.load_population(w_granularity)
+    srag_death_subnotification = data.load_srag_death_subnotification()
 
     DEFAULT_PLACE = (DEFAULT_STATE if w_granularity == 'state' else
                      DEFAULT_COUNTRY)
@@ -436,6 +444,7 @@ def write():
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
                                   index=len(options_date)-1)
+    death_subnotification = make_death_subr_widget(srag_death_subnotification, w_place)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
 
     # Estimativa R0
@@ -466,15 +475,8 @@ def write():
         st.markdown(texts.r0_ESTIMATION_DONT)
 
 
-    # Estimativa de Letalidade
-    lethality_rate_by_age, show_leth_rate_message = compute_lethality_by_age(w_granularity, w_place)
-    lethality_mean_est =  estimate_lethality_mean(cases_df[w_place]['deaths'],
-                                                  cases_df[w_place]['totalCases'])
     # Previsão de infectados
-    w_params, lethality_mean, risk_factor = make_param_widgets(NEIR0,
-                                                  widget_values,
-                                                  lethality_rate_by_age,
-                                                  lethality_mean_est=lethality_mean_est)
+    w_params, lethality_mean_place, lethality_type = make_param_widgets(NEIR0, widget_values)
     #make_derivatives_widgets(DERIVATIVES['values'])
 
     #Definições do modelo
@@ -515,17 +517,26 @@ def write():
 
     # Plot Deaths
     st.markdown(texts.DEATHS_INTRO)
-    if show_leth_rate_message & risk_factor:
+
+
+    lethality_mean_est, show_leth_age_message = estimate_lethality(cases_df[w_place]["deaths"],
+                                                                    cases_df[w_place]["totalCases"],
+                                                                    w_granularity, w_place,
+                                                                    lethality_type)
+    lethality_mean = make_death_widget(lethality_mean_est,
+                                       lethality_mean_place, widget_values)
+    if show_leth_age_message:
         st.markdown(
         f"**Este estado não apresentou dados de faixa etária."
         f" Por isso, são usados dados do Brasil para estimar as taxas de letalidade.**"
     )
-    fig_deahts = plot_deaths(model_output, 'linear', w_date, lethality_mean,
+    fig_deaths = plot_deaths(model_output, 'linear', w_date,
+                             lethality_mean * death_subnotification,
                              w_params['fator_subr'])
-    st.altair_chart(fig_deahts)
+    st.altair_chart(fig_deaths)
     st.markdown(texts.DEATH_DETAIL,unsafe_allow_html=True)
     st.markdown(texts.LEITOS_INTRO)
-    derivatives = make_EI_derivatives(ei_df)
+    derivatives = make_EI_derivatives(ei_df, w_params['fator_subr'])
     derivatives_chart = plot_derivatives(derivatives, w_date)
     st.altair_chart(derivatives_chart)
     st.markdown(texts.LEITOS_DETAIL,unsafe_allow_html=True)
