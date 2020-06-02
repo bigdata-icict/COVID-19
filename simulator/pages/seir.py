@@ -447,6 +447,9 @@ def write():
     death_subnotification = make_death_subr_widget(srag_death_subnotification, w_place)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
 
+    # Configurações da simulação
+    st.markdown(texts.SIMULATION_CONFIG)
+    
     # Estimativa R0
     st.markdown(texts.r0_ESTIMATION_TITLE)
     should_estimate_r0 = st.checkbox(
@@ -473,7 +476,9 @@ def write():
     else:
         r0_dist = make_r0_widgets(widget_values)
         st.markdown(texts.r0_ESTIMATION_DONT)
-
+    # Explicação dos parâmetros de óbito e leitos
+    st.markdown(texts.DESC_PARAMS_DEATHS)
+    st.markdown(texts.DESC_PARAMS_LEITOS)
 
     # Previsão de infectados
     w_params, lethality_mean_place, lethality_type = make_param_widgets(NEIR0, widget_values)
@@ -490,11 +495,8 @@ def write():
     SEIR0 = model._params['init_conditions']
     params_intro_txt, seir0_dict, other_params_txt = texts.make_SIMULATION_PARAMS(SEIR0, dists,
                                              should_estimate_r0)
-    # Configurações da simulação
-    st.markdown(texts.SIMULATION_CONFIG)
-    # Explicação dos parâmetros de óbito e leitos
-    st.markdown(texts.DESC_PARAMS_DEATHS)
-    st.markdown(texts.DESC_PARAMS_LEITOS)
+
+    
     #Outros parâmetros
     st.markdown(params_intro_txt)
     st.write(pd.DataFrame(seir0_dict).set_index("Compartimento"))

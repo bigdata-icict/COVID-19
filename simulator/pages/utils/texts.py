@@ -118,7 +118,9 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
 
 
 SIMULATION_CONFIG = '''
-### Configurações da  simulação (menu à esquerda)
+---
+
+### Configurações da  simulação 
 
 #### Seleção Brasil ou UF
 É possível selecionar o Brasil ou uma unidade da federação para utilizar seus parâmetros nas condições inicias de *População total* (N), *Indivíduos infecciosos inicialmente* (I0), *Indivíduos removidos com imunidade inicialmente* (R0) e *Indivíduos expostos inicialmente (E0)*.
@@ -144,7 +146,6 @@ DATA_SOURCES = '''
 '''
 
 r0_ESTIMATION_TITLE = '''
----
 
 ### Número de reprodução básico $R_{{0}}$
 
