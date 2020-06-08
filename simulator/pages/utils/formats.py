@@ -5,7 +5,9 @@ def global_format_func(s):
         'city': 'Município',
         'leth_est': 'Estimada',
         'leth_age': 'Ponderada por faixa etária',
-        'leth_ewm': 'Média móvel'
+        'leth_ewm': 'Média móvel',
+        'elderly_risk': 'População idosa',
+        'chronic_disease_risk': 'População adulta com pelo menos uma doença crônica não transmissível'
     }
     if s in fmt.keys():
         return fmt[s]
