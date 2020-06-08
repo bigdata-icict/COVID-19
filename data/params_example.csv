@@ -1,5 +1,5 @@
-place,fator_subr,t_max,lethality_mean,Ventiladores,Leitos
-SP,66,,,,
-São Paulo/SP,42,55,,,
-SC,,42,,,0.21
-PR,,,8,0.0066,
+place,fator_subr,t_max,lethality_mean,Ventiladores,Leitos,leth_ewm,leth_est,leth_age
+SP,,,,,,,6.5,
+SC,,,,,,,,
+PR,,42,,,0.21,6.8,7,
+,,,8,0.0062,,,,10
