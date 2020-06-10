@@ -25,21 +25,25 @@ DEFAULT_PARAMS = {
     'fator_subr': 1.0,
     'asymptomatic_rate': 50.0,
     'Leitos': 20.0,
+    'Leitos UTI': 50.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 }
 DERIVATIVES = {
     'functions': {
-        'Leitos': lambda df: df['Infected'] * (DERIVATIVES['values']['Leitos'] / 100)
+        'Leitos': lambda df: df['Infected'] * (DERIVATIVES['values']['Leitos'] / 100),
+        'Leitos UTI': lambda df: df['Leitos'] * (DERIVATIVES['values']['Leitos UTI'] / 100),
         #'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
     },
     'values': {
         'Leitos': 20.0,
+        'Leitos UTI': 50.0
         #'Ventiladores': 0.25,
     },
     'descriptions': {
         'Leitos': 'Taxa de internação dos casos notificados em %',
+        'Leitos UTI': 'Proporção de internações UTI'
         #'Ventiladores': 'Número de ventiladores necessários por leito ocupado',
     },
 }
@@ -109,7 +113,7 @@ def make_death_widget(lethality_mean_est, lethality_mean_place, widget_values):
             value=lethality_mean_est)
     return lethality_mean
 
-def make_param_widgets(NEIR0, widget_values, r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=None, defaults=DEFAULT_PARAMS):
 
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
@@ -137,6 +141,20 @@ def make_param_widgets(NEIR0, widget_values, r0_samples=None, defaults=DEFAULT_P
                                           format_func=global_format_func)
     lethality_mean_place = st.sidebar.empty()
 
+    enable_risk_adj = st.sidebar.checkbox(
+            'Ajustar taxa de internação UTI por estado',
+            value=False)
+
+    risk_adj_method = st.sidebar.selectbox(
+        'Método de ajuste de internação UTI',
+        options=['elderly_risk', 'chronic_disease_risk'],
+        format_func=global_format_func
+    )
+
+    state_risk_adj = {
+        'Leitos UTI': vulnerable_population[risk_adj_method] if enable_risk_adj else 1.0,
+    }
+
     for derivative in DERIVATIVES['descriptions']:
         DERIVATIVES['values'][derivative] = hideable(
             st.sidebar.number_input,
@@ -144,7 +162,7 @@ def make_param_widgets(NEIR0, widget_values, r0_samples=None, defaults=DEFAULT_P
             hidden_value=widget_values.get(derivative))(
             DERIVATIVES['descriptions'][derivative],
             min_value=0.0, max_value=100.0, step=0.01,
-            value=defaults[derivative],
+            value=defaults[derivative] * state_risk_adj.get(derivative, 1.0),
         )
 
 
@@ -421,6 +439,7 @@ def write():
     cases_df = data.load_cases(w_granularity, 'fiocruz')
     population_df = data.load_population(w_granularity)
     srag_death_subnotification = data.load_srag_death_subnotification()
+    vulnerable_population = data.load_vulnerable_population()
 
     DEFAULT_PLACE = (DEFAULT_STATE if w_granularity == 'state' else
                      DEFAULT_COUNTRY)
@@ -488,8 +507,7 @@ def write():
     st.markdown(texts.DESC_PARAMS_LEITOS)
 
     # Previsão de infectados
-    w_params, lethality_mean_place, lethality_type = make_param_widgets(NEIR0, widget_values)
-    #make_derivatives_widgets(DERIVATIVES['values'])
+    w_params, lethality_mean_place, lethality_type = make_param_widgets(NEIR0, widget_values, vulnerable_population.loc[w_place])
 
     #Definições do modelo
     model = SEIRBayes(**w_params, r0_dist=r0_dist)

@@ -11,6 +11,7 @@ COVID_19_BY_CITY_URL=('https://raw.githubusercontent.com/wcota/covid19br/'
 IBGE_POPULATION_PATH=DATA_DIR / 'ibge_population.csv'
 WORLD_POPULATION_PATH=DATA_DIR / 'country_population.csv'
 SRAG_SUBNOTIFICATION_PATH= DATA_DIR / 'srag_death_subnotification.csv'
+VULNERABLE_POPULATION_PATH=DATA_DIR / 'populao-em-risco.csv'
 COVID_SAUDE_URL = ('https://raw.githubusercontent.com/3778/COVID-19/'
                    'master/data/latest_cases_ms.csv')
 
@@ -209,4 +210,48 @@ def load_srag_death_subnotification():
         .set_index('state')
         .to_dict()
         ['death_subnotification']
+    )
+
+def load_vulnerable_population():
+    state_initials = {
+        'Acre': 'AC',
+        'Alagoas': 'AL',
+        'Amapá': 'AP',
+        'Amazonas': 'AM',
+        'Bahia': 'BA',
+        'Ceará': 'CE',
+        'Distrito Federal': 'DF',
+        'Espírito Santo': 'ES',
+        'Goiás': 'GO',
+        'Maranhão': 'MA',
+        'Mato Grosso': 'MT',
+        'Mato Grosso do Sul': 'MS',
+        'Minas Gerais': 'MG',
+        'Pará': 'PA',
+        'Paraíba': 'PB',
+        'Paraná': 'PR',
+        'Pernambuco': 'PE',
+        'Piauí': 'PI',
+        'Rio de Janeiro': 'RJ',
+        'Rio Grande do Norte': 'RN',
+        'Rio Grande do Sul': 'RS',
+        'Rondônia': 'RO',
+        'Roraima': 'RR',
+        'Santa Catarina': 'SC',
+        'São Paulo': 'SP',
+        'Sergipe': 'SE',
+        'Tocantins': 'TO'
+    }
+
+    return (
+        pd.read_csv(VULNERABLE_POPULATION_PATH)
+        .rename(columns={
+            'População adulta com pelo menos uma doença crônica não transmissível': 'chronic_disease_ratio',
+            'População idosa': 'elderly_ratio',
+            'UF': 'state',
+        })
+        .assign(state = lambda df: df['state'].apply(lambda k: state_initials.get(k, k)))
+        .set_index('state')
+        .assign(elderly_risk = lambda df: df['elderly_ratio'] / df['elderly_ratio']['Brasil'])
+        .assign(chronic_disease_risk = lambda df: df['chronic_disease_ratio'] / df['chronic_disease_ratio']['Brasil'])
     )
