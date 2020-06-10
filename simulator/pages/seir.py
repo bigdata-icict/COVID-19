@@ -225,11 +225,18 @@ def make_param_widgets(NEIR0, widget_values, r0_samples=None, defaults=DEFAULT_P
 
 
 def make_death_subr_widget(defaults, place):
-    return st.sidebar.number_input(
-        ('Fator de subnotificação de óbitos'),
-        min_value=0.0, max_value=100.0, step=0.1,
-        value=defaults.get(place, 1.0)
+    enable = st.sidebar.checkbox(
+        ('Usar subnotificação de óbitos por SRAG'), value=False
     )
+
+    if enable:
+        return st.sidebar.number_input(
+            ('Fator de subnotificação de óbitos'),
+            min_value=0.0, max_value=100.0, step=0.1,
+            value=defaults.get(place, 1.0)
+        )
+    else:
+        return 1.0
 
 @st.cache
 def make_NEIR0(cases_df, population_df, place, date):
