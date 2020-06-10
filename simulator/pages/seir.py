@@ -104,10 +104,10 @@ def make_date_options(cases_df, place):
             .index
             .strftime('%Y-%m-%d'))
 
-def make_death_widget(lethality_mean_est, lethality_mean_place, widget_values):
+def make_death_widget(lethality_mean_est, lethality_mean_place, lethality_type, widget_values):
     lethality_mean = hideable(lethality_mean_place.number_input,
-                              show=not('lethality_mean' in widget_values),
-                              hidden_value=widget_values.get('lethality_mean'))(
+                              show=not(lethality_type in widget_values),
+                              hidden_value=widget_values.get(lethality_type))(
             ('Taxa de letalidade (em %).'),
             min_value=0.0, max_value=100.0, step=0.1,
             value=lethality_mean_est)
@@ -451,7 +451,7 @@ def write():
                                    index=options_place.get_loc(DEFAULT_PLACE),
                                    format_func=global_format_func)
     try:
-        raw_widget_values = (pd.read_csv('data/param.csv')
+        raw_widget_values = (pd.read_csv('data/params.csv')
                           .set_index('place')
                           .T
                           .to_dict()
@@ -461,10 +461,10 @@ def write():
         widget_values = {}
 
     if widget_values:
+        st.markdown("---")
         st.markdown("### Parâmetros carregados")
         st.write(f"Foram carregados parâmetros pré-selecionados para a unidade escolhida:  **{w_place}**.")
         st.write('  \n'.join(f"{param}: {value}" for param, value in widget_values.items()))
-        st.markdown("---")
 
     options_date = make_date_options(cases_df, w_place)
     w_date = st.sidebar.selectbox('Data inicial',
@@ -475,7 +475,7 @@ def write():
 
     # Configurações da simulação
     st.markdown(texts.SIMULATION_CONFIG)
-    
+
     # Estimativa R0
     st.markdown(texts.r0_ESTIMATION_TITLE)
     should_estimate_r0 = st.checkbox(
@@ -521,7 +521,7 @@ def write():
     params_intro_txt, seir0_dict, other_params_txt = texts.make_SIMULATION_PARAMS(SEIR0, dists,
                                              should_estimate_r0)
 
-    
+
     #Outros parâmetros
     st.markdown(params_intro_txt)
     st.write(pd.DataFrame(seir0_dict).set_index("Compartimento"))
@@ -551,7 +551,9 @@ def write():
                                                                     w_granularity, w_place,
                                                                     lethality_type)
     lethality_mean = make_death_widget(lethality_mean_est,
-                                       lethality_mean_place, widget_values)
+                                       lethality_mean_place,
+                                       lethality_type,
+                                       widget_values)
     if show_leth_age_message:
         st.markdown(
         f"**Este estado não apresentou dados de faixa etária."
