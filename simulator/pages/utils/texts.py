@@ -202,9 +202,10 @@ UTI_INTERNACAO_DETAIL = '''
 <details>
     <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
     <div style="color: rgb(38, 39, 48);">
+        É aplicado um fator de correção à taxa de internação proporcional à
         <ul>
-            <li><b> População idosa</b>: Utiliza a taxa de internação considerando apenas as pessoas com 60 anos ou mais por local (estado, município ou país).</li>
-            <li><b> População adulta e crônica</b>: Utiliza a taxa de internação considerando apenas pessoas entre 20 e 59 anos com pelo menos uma doença crônica não transmissível.</li>
+            <li><b> População idosa</b>: Pessoas com 60 anos ou mais do local selecionado (estado ou país).</li>
+            <li><b> População adulta e crônica</b>: Pessoas entre 20 e 59 anos com pelo menos uma doença crônica não transmissível.</li>
         </ul>
     </div>
 </details>
