@@ -6,7 +6,12 @@ import pandas as pd
 import streamlit as st
 
 from pages.utils.formats import global_format_func
-from pages.utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0, prep_death_data_to_plot, make_death_chart, plot_derivatives
+from pages.utils.viz import (prep_tidy_data_to_plot,
+                             make_combined_chart,
+                             plot_r0,
+                             prep_death_data_to_plot,
+                             make_death_chart,
+                             plot_derivatives)
 from pages.utils import texts
 
 from covid19 import data
@@ -134,17 +139,24 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
             min_value=0.0, max_value=99.0, step=0.1,
             value=defaults['asymptomatic_rate'])/ 100
 
+    st.sidebar.markdown('#### Parâmetros da mortalidade')
     lethality_options = ['leth_est', 'leth_age', 'leth_ewm']
+    st.sidebar.markdown(texts.LETHALITY_TYPE_DETAIL, unsafe_allow_html=True)
     lethality_type = st.sidebar.selectbox("Selecione tipo de taxa de letalidade",
                                           options=lethality_options,
                                           index=0,
                                           format_func=global_format_func)
     lethality_mean_place = st.sidebar.empty()
+    st.sidebar.markdown(texts.SRAG_DETAIL, unsafe_allow_html=True)
+    death_subr_enable_place = st.sidebar.empty()
+    death_subr_place = st.sidebar.empty()
 
+    st.sidebar.markdown('#### Parâmetros de internação (definir os ajustes):')
     enable_risk_adj = st.sidebar.checkbox(
             'Ajustar taxa de internação UTI por estado',
             value=False)
 
+    st.sidebar.markdown(texts.UTI_INTERNACAO_DETAIL, unsafe_allow_html=True)
     risk_adj_method = st.sidebar.selectbox(
         'Método de ajuste de internação UTI',
         options=['elderly_risk', 'chronic_disease_risk'],
@@ -239,16 +251,18 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)},
             lethality_mean_place,
-            lethality_type)
+            lethality_type,
+            death_subr_enable_place,
+            death_subr_place)
 
 
-def make_death_subr_widget(defaults, place):
-    enable = st.sidebar.checkbox(
+def make_death_subr_widget(defaults, place, *placeholders):
+    enable = placeholders[0].checkbox(
         ('Usar subnotificação de óbitos por SRAG'), value=False
     )
 
     if enable:
-        return st.sidebar.number_input(
+        return placeholders[1].number_input(
             ('Fator de subnotificação de óbitos'),
             min_value=0.0, max_value=100.0, step=0.1,
             value=defaults.get(place, 1.0)
@@ -345,13 +359,17 @@ def estimate_lethality(cases_death, cases_covid, w_granularity, w_place, lethali
 
 def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
     _, _, _, R, t = model_output
-    R /= subnotification_factor
-    R *= (lethality_mean/100)
-    R = np.diff(R, axis=0, prepend=0)
-    source = prep_death_data_to_plot(R, t, start_date)
-    return make_death_chart(source,
+    deaths_accum = (R/subnotification_factor)*(lethality_mean/100)
+    deaths_daily = np.diff(deaths_accum, axis=0, prepend=0)
+    deaths_total = deaths_accum[-1, :]
+    deaths_total_mean = np.ceil(deaths_total.mean()).astype(int)
+    deaths_total_bounds = np.ceil(np.quantile(deaths_total, [0.05, 0.95])).astype(int)
+    source = prep_death_data_to_plot(deaths_daily, t, start_date)
+    return (*deaths_total_bounds,
+            deaths_total_mean,
+            make_death_chart(source,
                             scale=scale,
-                            show_uncertainty=True)
+                            show_uncertainty=True))
 
 
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
@@ -470,7 +488,6 @@ def write():
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
                                   index=len(options_date)-1)
-    death_subnotification = make_death_subr_widget(srag_death_subnotification, w_place)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
 
     # Configurações da simulação
@@ -507,7 +524,14 @@ def write():
     st.markdown(texts.DESC_PARAMS_LEITOS)
 
     # Previsão de infectados
-    w_params, lethality_mean_place, lethality_type = make_param_widgets(NEIR0, widget_values, vulnerable_population.loc[w_place])
+    (w_params,
+     lethality_mean_place,
+     lethality_type,
+     death_subr_enable_place,
+     death_subr_place) = make_param_widgets(
+            NEIR0, 
+            widget_values, 
+            vulnerable_population.loc[w_place])
 
     #Definições do modelo
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
@@ -554,21 +578,32 @@ def write():
                                        lethality_mean_place,
                                        lethality_type,
                                        widget_values)
+    death_subnotification = make_death_subr_widget(srag_death_subnotification,
+                                                   w_place,
+                                                   death_subr_enable_place,
+                                                   death_subr_place)
     if show_leth_age_message:
         st.markdown(
         f"**Este estado não apresentou dados de faixa etária."
         f" Por isso, são usados dados do Brasil para estimar as taxas de letalidade.**"
     )
-    fig_deaths = plot_deaths(model_output, 'linear', w_date,
-                             lethality_mean * death_subnotification,
-                             w_params['fator_subr'])
+
+    (deaths_total_lower_bound,
+     deaths_total_upper_bound,
+     deaths_total_mean,
+     fig_deaths) = plot_deaths(model_output, 'linear', w_date,
+                               lethality_mean * death_subnotification,
+                               w_params['fator_subr'])
     st.altair_chart(fig_deaths)
-    st.markdown(texts.DEATH_DETAIL,unsafe_allow_html=True)
+    st.markdown(texts.DEATHS_TOTAL_COUNT(deaths_total_lower_bound, 
+                                         deaths_total_mean, 
+                                         deaths_total_upper_bound))
+    st.markdown(texts.DEATH_DETAIL, unsafe_allow_html=True)
     st.markdown(texts.LEITOS_INTRO)
     derivatives = make_EI_derivatives(ei_df, w_params['fator_subr'])
     derivatives_chart = plot_derivatives(derivatives, w_date)
     st.altair_chart(derivatives_chart)
-    st.markdown(texts.LEITOS_DETAIL,unsafe_allow_html=True)
+    st.markdown(texts.LEITOS_DETAIL, unsafe_allow_html=True)
 
 
 

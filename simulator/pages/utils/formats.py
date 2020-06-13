@@ -7,7 +7,7 @@ def global_format_func(s):
         'leth_age': 'Ponderada por faixa etária',
         'leth_ewm': 'Média móvel',
         'elderly_risk': 'População idosa',
-        'chronic_disease_risk': 'População adulta com pelo menos uma doença crônica não transmissível'
+        'chronic_disease_risk': 'População adulta e crônica'
     }
     if s in fmt.keys():
         return fmt[s]

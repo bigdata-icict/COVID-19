@@ -177,7 +177,7 @@ def make_death_chart(data, scale="log", show_uncertainty=True):
             data,
             width=600,
             height=400,
-            title="Evolução do total de óbitos causados pelo COVID-19",
+            title="Evolução dos óbitos diários causados pela COVID-19",
         )
         .mark_line(color=plot_params['obito']['color'])
         .transform_fold(

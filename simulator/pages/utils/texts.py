@@ -48,7 +48,7 @@ INTRO_MODELO='''
 
 DEATHS_INTRO='''
 ### Previsão de óbitos
-O gráfico abaixo mostra a estimativa de óbitos acumulados para os parâmetros selecionados. O cálculo é realizado a partir da aplicação de uma taxa de letalidade.
+O gráfico abaixo mostra a estimativa de óbitos diários para os parâmetros selecionados. O cálculo é realizado a partir da aplicação de uma taxa de letalidade.
 
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
 '''
@@ -188,3 +188,46 @@ def insert_logos():
         "</a>"
     )
     return '<div style="text-align: right;">' + logo_html["3778"] + logo_html["fiocruz"] + "</div>"
+
+SRAG_DETAIL = '''
+<details>
+    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);">
+        <p>O cálculo da subnotificação corresponde ao excesso de registros de óbitos por SRAG em relação ao histórico de ocorrências.</p>
+    </div>
+</details>
+'''
+
+UTI_INTERNACAO_DETAIL = '''
+<details>
+    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);">
+        É aplicado um fator de correção à taxa de internação proporcional à
+        <ul>
+            <li><b> População idosa</b>: Pessoas com 60 anos ou mais do local selecionado (estado ou país).</li>
+            <li><b> População adulta e crônica</b>: Pessoas entre 20 e 59 anos com pelo menos uma doença crônica não transmissível.</li>
+        </ul>
+    </div>
+</details>
+'''
+
+LETHALITY_TYPE_DETAIL = '''
+<details>
+    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);">
+        <ul>
+            <li><b>Estimada</b>: Utiliza a porcentagem de óbitos do último dado histórico.</li>
+            <li><b>Ponderada por faixa etária</b>: Utiliza a porcentagem de óbitos do estado (se estiver disponível).</li>
+            <li><b>Média Móvel</b>: Calcula a médias móvel com halflife de 7. Este método atribui um peso maior à óbitos que ocorreram mais recentemente.</li>
+        </ul>
+    </div>
+</details>
+'''
+
+def DEATHS_TOTAL_COUNT(lower, mean, upper): return f'''
+Total de óbitos acumulados:
+
+* Limite superior: {upper}
+* Média: {mean}
+* Limite inferior: {lower}
+'''
