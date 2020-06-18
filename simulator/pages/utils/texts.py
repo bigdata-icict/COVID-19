@@ -192,7 +192,7 @@ def insert_logos():
 
 SRAG_DETAIL = '''
 <details>
-    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Detalhamento do Parâmetro</strong></summary>
     <div style="color: rgb(38, 39, 48);font-size: 12px;">
         <p style="color: rgb(38, 39, 48);font-size: 12px;">O cálculo da subnotificação corresponde ao excesso de registros de óbitos por SRAG em relação ao histórico de ocorrências.</p>
     </div>
@@ -201,7 +201,7 @@ SRAG_DETAIL = '''
 
 UTI_INTERNACAO_DETAIL = '''
 <details>
-    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Detalhamento do Parâmetro</strong></summary>
     <div style="color: rgb(38, 39, 48);font-size: 12px;">
         É aplicado um fator de correção à taxa de internação proporcional à
         <ul>
@@ -214,7 +214,7 @@ UTI_INTERNACAO_DETAIL = '''
 
 LETHALITY_TYPE_DETAIL = '''
 <details>
-    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Detalhamento do Parâmetro</strong></summary>
     <div style="color: rgb(38, 39, 48);font-size: 10px;">
         <ul>
             <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Estimada</b>: Utiliza a porcentagem de óbitos do último dado histórico.</li>
