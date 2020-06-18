@@ -15,6 +15,7 @@ Acesse [este link](https://github.com/bigdata-icict/COVID-19) para informações
 PARAMETER_SELECTION='''
 # Seleção de parâmetros
 Para simular outros cenários, altere um parâmetro e tecle **Enter**. O novo resultado será calculado e apresentado automaticamente.
+---
 #### Parâmetros de Localidade
 '''
 
@@ -191,21 +192,21 @@ def insert_logos():
 
 SRAG_DETAIL = '''
 <details>
-    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
-    <div style="color: rgb(38, 39, 48);">
-        <p>O cálculo da subnotificação corresponde ao excesso de registros de óbitos por SRAG em relação ao histórico de ocorrências.</p>
+    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);font-size: 12px;">
+        <p style="color: rgb(38, 39, 48);font-size: 12px;">O cálculo da subnotificação corresponde ao excesso de registros de óbitos por SRAG em relação ao histórico de ocorrências.</p>
     </div>
 </details>
 '''
 
 UTI_INTERNACAO_DETAIL = '''
 <details>
-    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
-    <div style="color: rgb(38, 39, 48);">
+    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);font-size: 12px;">
         É aplicado um fator de correção à taxa de internação proporcional à
         <ul>
-            <li><b> População idosa</b>: Pessoas com 60 anos ou mais do local selecionado (estado ou país).</li>
-            <li><b> População adulta e crônica</b>: Pessoas entre 20 e 59 anos com pelo menos uma doença crônica não transmissível.</li>
+            <li style="color: rgb(38, 39, 48);font-size: 12px;"><b> População idosa</b>: Pessoas com 60 anos ou mais do local selecionado (estado ou país).</li>
+            <li style="color: rgb(38, 39, 48);font-size: 12px;"><b> População adulta e crônica</b>: Pessoas entre 20 e 59 anos com pelo menos uma doença crônica não transmissível.</li>
         </ul>
     </div>
 </details>
@@ -213,19 +214,19 @@ UTI_INTERNACAO_DETAIL = '''
 
 LETHALITY_TYPE_DETAIL = '''
 <details>
-    <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
-    <div style="color: rgb(38, 39, 48);">
+    <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Mostrar metodologia de cálculo</strong></summary>
+    <div style="color: rgb(38, 39, 48);font-size: 10px;">
         <ul>
-            <li><b>Estimada</b>: Utiliza a porcentagem de óbitos do último dado histórico.</li>
-            <li><b>Ponderada por faixa etária</b>: Utiliza a porcentagem de óbitos do estado (se estiver disponível).</li>
-            <li><b>Média Móvel</b>: Calcula a médias móvel com halflife de 7. Este método atribui um peso maior à óbitos que ocorreram mais recentemente.</li>
+            <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Estimada</b>: Utiliza a porcentagem de óbitos do último dado histórico.</li>
+            <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Ponderada por faixa etária</b>: Utiliza a porcentagem de óbitos do estado (se estiver disponível).</li>
+            <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Média Móvel</b>: Calcula a médias móvel com halflife de 7. Este método atribui um peso maior à óbitos que ocorreram mais recentemente.</li>
         </ul>
     </div>
 </details>
 '''
 
 def DEATHS_TOTAL_COUNT(lower, mean, upper): return f'''
-Total de óbitos acumulados:
+Total de óbitos acumulados até o período selecionado para a simulação:
 
 * Limite superior: {upper}
 * Média: {mean}

@@ -70,6 +70,16 @@ def prepare_for_r0_estimation(df):
         .set_index('dates')
     )
 
+def estimate_active_cases(cases, gamma_sup):
+    return (
+        cases
+        .assign(estimatedActiveCases = lambda df: df['newCases'].rolling(window=int(gamma_sup),
+                                                                         min_periods=1)
+                                                                .sum()
+                )
+        .assign(estimatedRecoveredCases = lambda df: df['totalCases'] - df['estimatedActiveCases'])
+    )
+
 
 @st.cache
 def make_brazil_cases(cases_df):
@@ -123,7 +133,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
-
+    st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da simulação')
     fator_subr = hideable(st.sidebar.number_input,
                           show=not('fator_subr' in widget_values),
@@ -138,31 +148,36 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
             ('Taxa de assintomáticos em %'),
             min_value=0.0, max_value=99.0, step=0.1,
             value=defaults['asymptomatic_rate'])/ 100
-
+    st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da mortalidade')
     lethality_options = ['leth_est', 'leth_age', 'leth_ewm']
-    st.sidebar.markdown(texts.LETHALITY_TYPE_DETAIL, unsafe_allow_html=True)
+    
     lethality_type = st.sidebar.selectbox("Selecione tipo de taxa de letalidade",
                                           options=lethality_options,
                                           index=0,
                                           format_func=global_format_func)
+    st.sidebar.markdown(texts.LETHALITY_TYPE_DETAIL, unsafe_allow_html=True)
+
     lethality_mean_place = st.sidebar.empty()
-    st.sidebar.markdown(texts.SRAG_DETAIL, unsafe_allow_html=True)
     death_subr_enable_place = st.sidebar.empty()
     death_subr_place = st.sidebar.empty()
+    st.sidebar.markdown(texts.SRAG_DETAIL, unsafe_allow_html=True)
 
-    st.sidebar.markdown('#### Parâmetros de internação (definir os ajustes):')
+    st.sidebar.markdown('---')
+    st.sidebar.markdown('#### Parâmetros de internação:')
     enable_risk_adj = st.sidebar.checkbox(
             'Ajustar taxa de internação UTI por estado',
             value=False)
 
-    st.sidebar.markdown(texts.UTI_INTERNACAO_DETAIL, unsafe_allow_html=True)
+   
+   
     risk_adj_method = st.sidebar.selectbox(
         'Método de ajuste de internação UTI',
         options=['elderly_risk', 'chronic_disease_risk'],
         format_func=global_format_func
     )
-
+    st.sidebar.markdown(texts.UTI_INTERNACAO_DETAIL, unsafe_allow_html=True)
+    
     state_risk_adj = {
         'Leitos UTI': vulnerable_population[risk_adj_method] if enable_risk_adj else 1.0,
     }
@@ -177,7 +192,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
             value=defaults[derivative] * state_risk_adj.get(derivative, 1.0),
         )
 
-
+    st.sidebar.markdown('---')
     st.sidebar.markdown('#### Condições iniciais')
     N = hideable(st.sidebar.number_input,
                 show=not('N' in widget_values),
@@ -206,7 +221,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
                   'Indivíduos removidos com imunidade inicialmente (R0)',
                   min_value=_R0, max_value=_R0,
                   value=_R0)
-
+    st.sidebar.markdown('---')
     st.sidebar.markdown('#### Período de infecção (1/γ) e tempo incubação (1/α)')
 
     gamma_inf = hideable(st.sidebar.number_input,
@@ -237,6 +252,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
                         min_value=0.1, max_value=60.0, step=0.1,
                         value=defaults['alpha_inv_dist'][1])
 
+    st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros gerais')
 
     t_max = hideable(st.sidebar.number_input,
@@ -271,11 +287,15 @@ def make_death_subr_widget(defaults, place, *placeholders):
         return 1.0
 
 @st.cache
-def make_NEIR0(cases_df, population_df, place, date):
+def make_NEIR0(cases_df, population_df, place, date, gamma_sup=DEFAULT_PARAMS['gamma_inv_dist'][1]):
     N0 = population_df[place]
-    I0 = cases_df[place]['totalCases'][date]
+    I0 = (cases_df[place]
+          .pipe(estimate_active_cases, gamma_sup)
+            ['estimatedActiveCases'][date])
     E0 = 2*I0
-    R0 = 0
+    R0 = (cases_df[place]
+          .pipe(estimate_active_cases, gamma_sup)
+            ['estimatedRecoveredCases'][date])
     return (N0, E0, I0, R0)
 
 
@@ -448,6 +468,7 @@ def write():
 
     st.markdown("## Modelo Epidemiológico (SEIR-Bayes)")
     st.markdown(texts.INTRO_MODELO)
+    st.sidebar.markdown("---")
     st.sidebar.markdown(texts.PARAMETER_SELECTION)
     w_granularity = st.sidebar.selectbox('Unidade',
                                          options=['country', 'state'],
@@ -594,6 +615,8 @@ def write():
      fig_deaths) = plot_deaths(model_output, 'linear', w_date,
                                lethality_mean * death_subnotification,
                                w_params['fator_subr'])
+
+
     st.altair_chart(fig_deaths)
     st.markdown(texts.DEATHS_TOTAL_COUNT(deaths_total_lower_bound, 
                                          deaths_total_mean, 
