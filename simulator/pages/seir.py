@@ -123,7 +123,7 @@ def make_death_widget(lethality_mean_est, lethality_mean_place, lethality_type, 
     lethality_mean = hideable(lethality_mean_place.number_input,
                               show=not(lethality_type in widget_values),
                               hidden_value=widget_values.get(lethality_type))(
-            ('Taxa de letalidade (em %).'),
+            ('Taxa de óbitos com base em recuperados (em %).'),
             min_value=0.0, max_value=100.0, step=0.1,
             value=lethality_mean_est)
     return lethality_mean
@@ -381,10 +381,11 @@ def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification
     _, _, _, R, t = model_output
     deaths_accum = (R/subnotification_factor)*(lethality_mean/100)
     deaths_daily = np.diff(deaths_accum, axis=0, prepend=0)
+    deaths_daily = deaths_daily[1:]
     deaths_total = deaths_accum[-1, :]
     deaths_total_mean = np.ceil(deaths_total.mean()).astype(int)
     deaths_total_bounds = np.ceil(np.quantile(deaths_total, [0.05, 0.95])).astype(int)
-    source = prep_death_data_to_plot(deaths_daily, t, start_date)
+    source = prep_death_data_to_plot(deaths_daily, t[1:], start_date)
     return (*deaths_total_bounds,
             deaths_total_mean,
             make_death_chart(source,
