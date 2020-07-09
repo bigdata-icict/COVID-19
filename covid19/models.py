@@ -66,6 +66,7 @@ class SEIRBayes:
     '''
     def __init__(self, 
                  NEIR0=(100, 20, 10, 0),
+                 deaths={"death_rate": 0, "init_deaths": 0},
                  r0_dist=(2.5, 6.0, 0.95, 'lognorm'),
                  gamma_inv_dist=(7, 14, 0.95, 'lognorm'),
                  alpha_inv_dist=(4.1, 7, 0.95, 'lognorm'),
@@ -228,6 +229,10 @@ class SEIRBayes:
                       for _ in range(4)]
         S[0, ], E[0, ], I[0, ], R[0, ] = self._params['init_conditions']
 
+        # init deaths compartment
+        D = np.zeros(dims)
+        D[0,] = self.params["deaths"]["init_deaths"]
+
         r0 = self._params['r0_dist'].rvs(size)
         gamma = 1/self._params['gamma_inv_dist'].rvs(size)
         alpha = 1/self._params['alpha_inv_dist'].rvs(size)
@@ -245,13 +250,15 @@ class SEIRBayes:
             dE = SE - EI
             dI = EI - IR
             dR = IR - 0
+            dD = dR * death_rate
 
             S[t, ] = S[t-1, ] + dS
             E[t, ] = E[t-1, ] + dE
             I[t, ] = I[t-1, ] + dI
             R[t, ] = R[t-1, ] + dR
+            D[t,] = (D[t - 1,] + dD).clip(0).astype(int)
 
         if return_param_samples:
-            return S, E, I, R, t_space, r0, alpha, gamma, beta
+            return S, E, I, R, D, t_space, r0, alpha, gamma, beta
         else:
-            return S, E, I, R, t_space
+            return S, E, I, R, D, t_space
