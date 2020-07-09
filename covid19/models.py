@@ -125,6 +125,7 @@ class SEIRBayes:
 
         self.params = {
             'NEIR0': NEIR0,
+            "deaths": deaths,
             'r0_dist': r0_dist,
             'gamma_inv_dist': gamma_inv_dist,
             'alpha_inv_dist': alpha_inv_dist,
@@ -230,7 +231,7 @@ class SEIRBayes:
         S[0, ], E[0, ], I[0, ], R[0, ] = self._params['init_conditions']
 
         # init deaths compartment
-        D = np.zeros(dims)
+        D = np.zeros((self._params['t_max'], size))
         D[0,] = self.params["deaths"]["init_deaths"]
 
         r0 = self._params['r0_dist'].rvs(size)
@@ -250,7 +251,7 @@ class SEIRBayes:
             dE = SE - EI
             dI = EI - IR
             dR = IR - 0
-            dD = dR * death_rate
+            dD = dR * self.params["deaths"]["death_rate"]
 
             S[t, ] = S[t-1, ] + dS
             E[t, ] = E[t-1, ] + dE
