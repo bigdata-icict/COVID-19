@@ -340,7 +340,7 @@ def make_download_href(df, params, r0_dist, should_estimate_r0):
 
 
 def make_EI_df(model, model_output, sample_size):
-    _, E, I, _, t = model_output
+    _, E, I, _, D, t = model_output
     size = sample_size*model.params['t_max']
     return (pd.DataFrame({'Exposed': E.reshape(size),
                           'Infected': I.reshape(size),
@@ -349,7 +349,7 @@ def make_EI_df(model, model_output, sample_size):
 
 
 def plot_EI(model_output, scale, start_date):
-    _, E, I, _, t = model_output
+    _, E, I, _, D, t = model_output
     source = prep_tidy_data_to_plot(E, I, t, start_date)
     return make_combined_chart(source,
                                scale=scale,
@@ -378,8 +378,8 @@ def estimate_lethality(cases_death, cases_covid, w_granularity, w_place, lethali
     return (float(lethality_mean), show_leth_rate_message)
 
 def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
-    _, _, _, R, t = model_output
-    deaths_accum = (R/subnotification_factor)*(lethality_mean/100)
+    _, _, _, R, D, t = model_output
+    deaths_accum = D
     deaths_daily = np.diff(deaths_accum, axis=0, prepend=0)
     deaths_daily = deaths_daily[1:]
     deaths_total = deaths_accum[-1, :]
@@ -555,6 +555,22 @@ def write():
             widget_values, 
             vulnerable_population.loc[w_place])
 
+    # Deaths params
+    lethality_mean_est, show_leth_age_message = estimate_lethality(cases_df[w_place]["deaths"],
+                                                                    cases_df[w_place]["totalCases"],
+                                                                    w_granularity, w_place,
+                                                                    lethality_type)
+    lethality_mean = make_death_widget(lethality_mean_est,
+                                       lethality_mean_place,
+                                       lethality_type,
+                                       widget_values)
+    death_subnotification = make_death_subr_widget(srag_death_subnotification,
+                                                   w_place,
+                                                   death_subr_enable_place,
+                                                   death_subr_place)
+
+    w_params['deaths']={"death_rate": lethality_mean/100, "init_deaths": cases_df[w_place]["deaths"][-1]}
+
     #Definições do modelo
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
@@ -591,19 +607,6 @@ def write():
     # Plot Deaths
     st.markdown(texts.DEATHS_INTRO)
 
-
-    lethality_mean_est, show_leth_age_message = estimate_lethality(cases_df[w_place]["deaths"],
-                                                                    cases_df[w_place]["totalCases"],
-                                                                    w_granularity, w_place,
-                                                                    lethality_type)
-    lethality_mean = make_death_widget(lethality_mean_est,
-                                       lethality_mean_place,
-                                       lethality_type,
-                                       widget_values)
-    death_subnotification = make_death_subr_widget(srag_death_subnotification,
-                                                   w_place,
-                                                   death_subr_enable_place,
-                                                   death_subr_place)
     if show_leth_age_message:
         st.markdown(
         f"**Este estado não apresentou dados de faixa etária."
