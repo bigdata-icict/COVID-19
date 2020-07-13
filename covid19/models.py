@@ -251,7 +251,7 @@ class SEIRBayes:
             dE = SE - EI
             dI = EI - IR
             dR = IR - 0
-            dD = dR * self.params["deaths"]["death_rate"]/self.params["fator_subr"]
+            dD = dR * 0.2 * self.params["deaths"]["death_rate"]
 
             S[t, ] = S[t-1, ] + dS
             E[t, ] = E[t-1, ] + dE
