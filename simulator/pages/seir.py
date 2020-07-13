@@ -29,8 +29,8 @@ DEFAULT_COUNTRY = 'Brasil'
 DEFAULT_PARAMS = {
     'fator_subr': 1.0,
     'asymptomatic_rate': 50.0,
-    'Leitos': 20.0,
-    'Leitos UTI': 50.0,
+    'Leitos': 13.0,
+    'Leitos UTI': 25.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
@@ -42,8 +42,8 @@ DERIVATIVES = {
         #'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
     },
     'values': {
-        'Leitos': 20.0,
-        'Leitos UTI': 50.0
+        'Leitos': 13.0,
+        'Leitos UTI': 25.5
         #'Ventiladores': 0.25,
     },
     'descriptions': {
@@ -141,13 +141,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
             value=defaults['fator_subr'])
-
-    asymptomatic_rate = hideable(st.sidebar.number_input,
-                          show=not('asymptomatic_rate' in widget_values),
-                          hidden_value=widget_values.get('asymptomatic_rate'))(
-            ('Taxa de assintomáticos em %'),
-            min_value=0.0, max_value=99.0, step=0.1,
-            value=defaults['asymptomatic_rate'])/ 100
+    asymptomatic_rate = value=defaults['asymptomatic_rate']/ 100
     st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da mortalidade')
     lethality_options = ['leth_est', 'leth_age', 'leth_ewm']
@@ -367,10 +361,16 @@ def estimate_lethality(cases_death, cases_covid, w_granularity, w_place, lethali
         ) * 100
 
     if lethality_type == 'leth_est':
-        lethality_mean = (
+        if(cases_death.iloc[-1] == 0 or cases_covid.iloc[-1]==0 ):
+            lethality_mean = (
+                cases_death.iloc[-2] 
+                / cases_covid.iloc[-2]
+            ) * 100
+        else:
+            lethality_mean = (
             cases_death.iloc[-1]
-            / cases_covid.iloc[-1]
-        ) * 100
+                / cases_covid.iloc[-1]
+            ) * 100
 
     if lethality_type == 'leth_age':
         lethality_mean, show_leth_rate_message = compute_lethality_by_age(w_granularity, w_place)

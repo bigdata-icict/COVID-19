@@ -168,7 +168,7 @@ def prepare_age_data(level, old_col, new_col):
     df = (
         df.rename(columns=df.iloc[0])
         .drop(df.index[0])
-        .drop(columns=["Nível Territorial", "Trimestre", "Variável", "Unidade de Medida"])
+        .drop(columns=["Trimestre", "Variável", "Unidade de Medida"])
         .rename(columns={"Grupo de idade": "g_idade", old_col: new_col})
     )
     df = df.pivot(new_col, columns="g_idade")["Valor"].reset_index()

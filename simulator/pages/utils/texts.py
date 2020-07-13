@@ -66,7 +66,7 @@ DEATH_DETAIL='''
 LEITOS_INTRO='''
 ### Previsão da demanda de leitos
 
-O gráfico abaixo mostra a estimativa da demanda de leitos acumulada para os parâmetros selecionados. O cálculo é realizado a partir da aplicação de umataxa de internação.
+O gráfico abaixo mostra a estimativa da demanda de leitos acumulada para os parâmetros selecionados. O cálculo é realizado a partir da aplicação de uma taxa de internação.
 (!) Importante: Os resultados apresentados são preliminares e estão em fase de validação.
 '''
 
@@ -143,6 +143,8 @@ DATA_SOURCES = '''
 * [Early Transmission Dynamics in Wuhan, China, of Novel Coronavirus–Infected Pneumonia](https://www.nejm.org/doi/full/10.1056/NEJMoa2001316)
 * [Estimation of the reproductive number of novel coronavirus (COVID-19) and the probable outbreak size on the Diamond Princess cruise ship: A data-driven analysis](https://www.ijidonline.com/article/S1201-9712(20)30091-6/fulltext)
 * [MIDAS Online Portal for COVID-19 Modeling Research](https://midasnetwork.us/covid-19/#resources)
+* [Estimates of the severity of COVID-19 disease](https://www.medrxiv.org/content/10.1101/2020.03.09.20033357v1)
+* [National Health Commission Update on February 05, 2020](http://weekly.chinacdc.cn/news/TrackingtheEpidemic.htm#NHCFeb05)
 
 '''
 
@@ -203,7 +205,7 @@ UTI_INTERNACAO_DETAIL = '''
 <details>
     <summary style="color: rgb(38, 39, 48);font-size: 12px;"><strong>Detalhamento do Parâmetro</strong></summary>
     <div style="color: rgb(38, 39, 48);font-size: 12px;">
-        É aplicado um fator de correção à taxa de internação proporcional à
+        <b>É aplicado um fator de correção à taxa de internação proporcional à</b>
         <ul>
             <li style="color: rgb(38, 39, 48);font-size: 12px;"><b> População idosa</b>: Pessoas com 60 anos ou mais do local selecionado (estado ou país).</li>
             <li style="color: rgb(38, 39, 48);font-size: 12px;"><b> População adulta e crônica</b>: Pessoas entre 20 e 59 anos com pelo menos uma doença crônica não transmissível.</li>
@@ -219,14 +221,14 @@ LETHALITY_TYPE_DETAIL = '''
         <ul>
             <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Estimada</b>: Utiliza a porcentagem de óbitos do último dado histórico.</li>
             <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Ponderada por faixa etária</b>: Utiliza a porcentagem de óbitos do estado (se estiver disponível).</li>
-            <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Média Móvel</b>: Calcula a médias móvel com halflife de 7. Este método atribui um peso maior à óbitos que ocorreram mais recentemente.</li>
+            <li style="color: rgb(38, 39, 48);font-size: 12px;"><b>Média Móvel</b>: Calcula a média móvel com ponderação do tipo half-life de 7 (dias). Este método atribui um peso maior aos óbitos que ocorreram mais recentemente.</li>
         </ul>
     </div>
 </details>
 '''
 
 def DEATHS_TOTAL_COUNT(lower, mean, upper): return f'''
-Total de óbitos acumulados até o período selecionado para a simulação:
+** Total de óbitos acumulados até o período selecionado para a simulação: **
 
 * Limite superior: {upper}
 * Média: {mean}
