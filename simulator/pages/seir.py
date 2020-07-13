@@ -123,7 +123,7 @@ def make_death_widget(lethality_mean_est, lethality_mean_place, lethality_type, 
     lethality_mean = hideable(lethality_mean_place.number_input,
                               show=not(lethality_type in widget_values),
                               hidden_value=widget_values.get(lethality_type))(
-            ('Taxa de óbitos com base em recuperados (em %).'),
+            ('Taxa de óbitos com base em retirados (em %).'),
             min_value=0.0, max_value=100.0, step=0.1,
             value=lethality_mean_est)
     return lethality_mean

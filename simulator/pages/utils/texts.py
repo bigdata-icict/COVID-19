@@ -74,7 +74,10 @@ LEITOS_DETAIL='''
 <details>
     <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
     <div style="color: rgb(38, 39, 48);">
-        <p>A demanda de leitos é calculada a partir da incidência de infectados e a taxa de internação, ou seja, a proporção de indivíduos que necessitam ser internados.</p>
+    <ul>
+        <li><p>A demanda de leitos é calculada a partir da incidência de infectados e a taxa de internação, ou seja, a proporção de indivíduos que necessitam ser internados.</p></li>
+        <li><p>O número de leitos UTI é uma proporção da demanda de leitos</p></li>
+    </ul>
     </div>
 </details>
 '''
