@@ -509,7 +509,7 @@ def write():
     options_date = make_date_options(cases_df, w_place)
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
-                                  index=len(options_date)-1)
+                                  index=len(options_date)-7)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
 
     # Configurações da simulação
