@@ -13,6 +13,7 @@ from pages.utils.viz import (prep_tidy_data_to_plot,
                              make_death_chart,
                              plot_derivatives)
 from pages.utils import texts
+from covid19 import parameter_adjustment
 
 from covid19 import data
 from covid19.estimation import ReproductionNumber
@@ -128,11 +129,15 @@ def make_death_widget(lethality_mean_est, lethality_mean_place, lethality_type, 
             value=lethality_mean_est)
     return lethality_mean
 
-def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, widget_values, vulnerable_population, state, r0_samples=None,  defaults=DEFAULT_PARAMS):
 
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
+    adjustment = parameter_adjustment.parameter_adjustment[state] / 100
+    st.write("---")
+    st.write(adjustment)
+    st.write("---")
     st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da simulação')
     fator_subr = hideable(st.sidebar.number_input,
@@ -141,7 +146,8 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
             ('Fator de subnotificação. Este número irá multiplicar o número de infectados e expostos.'),
             min_value=1.0, max_value=200.0, step=0.1,
             value=defaults['fator_subr'])
-    asymptomatic_rate = value=defaults['asymptomatic_rate']/ 100
+    
+    asymptomatic_rate = DEFAULT_PARAMS["asymptomatic_rate"]/ 100
     st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da mortalidade')
     lethality_options = ['leth_est', 'leth_age', 'leth_ewm']
@@ -255,7 +261,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, r0_samples=N
                     'Período de simulação em dias (t_max)',
                     min_value=7, max_value=90*3, step=1,
                     value=90)
-    return ({'fator_subr': fator_subr/ (1 - asymptomatic_rate),
+    return ({'fator_subr': (fator_subr+adjustment)/ (1 - asymptomatic_rate),
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
@@ -553,7 +559,7 @@ def write():
      death_subr_place) = make_param_widgets(
             NEIR0, 
             widget_values, 
-            vulnerable_population.loc[w_place])
+            vulnerable_population.loc[w_place],w_place)
 
     # Deaths params
     lethality_mean_est, show_leth_age_message = estimate_lethality(cases_df[w_place]["deaths"],
