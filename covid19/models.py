@@ -67,6 +67,7 @@ class SEIRBayes:
     def __init__(self, 
                  NEIR0=(100, 20, 10, 0),
                  deaths={"death_rate": 0, "init_deaths": 0},
+                 leitos={"leitos": 0},
                  r0_dist=(2.5, 6.0, 0.95, 'lognorm'),
                  gamma_inv_dist=(7, 14, 0.95, 'lognorm'),
                  alpha_inv_dist=(4.1, 7, 0.95, 'lognorm'),
@@ -119,6 +120,7 @@ class SEIRBayes:
             array([5.1, 4.9, 6. ])
             
         '''
+        npr.seed(42);
         r0_dist = self.init_param_dist(r0_dist)
         alpha_inv_dist = self.init_param_dist(alpha_inv_dist)
         gamma_inv_dist = self.init_param_dist(gamma_inv_dist)
@@ -126,6 +128,7 @@ class SEIRBayes:
         self.params = {
             'NEIR0': NEIR0,
             "deaths": deaths,
+            "leitos": leitos,
             'r0_dist': r0_dist,
             'gamma_inv_dist': gamma_inv_dist,
             'alpha_inv_dist': alpha_inv_dist,
@@ -251,7 +254,7 @@ class SEIRBayes:
             dE = SE - EI
             dI = EI - IR
             dR = IR - 0
-            dD = dR * 0.2 * self.params["deaths"]["death_rate"]
+            dD = dR * self.params["leitos"] * self.params["deaths"]["death_rate"]
 
             S[t, ] = S[t-1, ] + dS
             E[t, ] = E[t-1, ] + dE

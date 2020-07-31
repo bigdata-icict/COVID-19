@@ -43,7 +43,7 @@ DERIVATIVES = {
         #'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
     },
     'values': {
-        'Leitos': 13.0,
+        'Leitos': 20.0,
         'Leitos UTI': 25.5
         #'Ventiladores': 0.25,
     },
@@ -515,7 +515,7 @@ def write():
     options_date = make_date_options(cases_df, w_place)
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
-                                  index=len(options_date)-7)
+                                  index=len(options_date)-14)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
 
     # Configurações da simulação
@@ -576,7 +576,7 @@ def write():
                                                    death_subr_place)
 
     w_params['deaths']={"death_rate": lethality_mean/100, "init_deaths": cases_df[w_place]["deaths"][-1]}
-
+    w_params['leitos'] = DERIVATIVES['values']["Leitos"]/100
     #Definições do modelo
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
     model_output = model.sample(SAMPLE_SIZE)
@@ -589,7 +589,7 @@ def write():
     params_intro_txt, seir0_dict, other_params_txt = texts.make_SIMULATION_PARAMS(SEIR0, dists,
                                              should_estimate_r0)
 
-
+    
     #Outros parâmetros
     st.markdown(params_intro_txt)
     st.write(pd.DataFrame(seir0_dict).set_index("Compartimento"))
@@ -618,6 +618,7 @@ def write():
         f"**Este estado não apresentou dados de faixa etária."
         f" Por isso, são usados dados do Brasil para estimar as taxas de letalidade.**"
     )
+    
 
     (deaths_total_lower_bound,
      deaths_total_upper_bound,

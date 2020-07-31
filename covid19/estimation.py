@@ -33,6 +33,7 @@ class ReproductionNumber:
         self.posterior_summary = None
         self.check_time_periods()
         self.check_serial_number_pmf()
+        np.random.seed(42)
 
     def check_time_periods(self):
         if self.window_width is None:
