@@ -134,10 +134,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, state, r0_sa
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
-    if state != "Brasil":
-        adjustment = parameter_adjustment.parameter_adjustment[state] / 100
-    else:
-        adjustment = 0
+    adjustment = parameter_adjustment.parameter_adjustment[state] / 100
     st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da simulação')
     fator_subr = hideable(st.sidebar.number_input,

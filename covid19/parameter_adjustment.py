@@ -25,5 +25,6 @@ parameter_adjustment={
 'SC':-9.50,
 'SE':0.58,
 'SP':3.42,
-'TO':-4.98
+'TO':-4.98,
+'Brasil':31.07
 }
