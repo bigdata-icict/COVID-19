@@ -30,7 +30,7 @@ DEFAULT_COUNTRY = 'Brasil'
 DEFAULT_PARAMS = {
     'fator_subr': 1.0,
     'asymptomatic_rate': 50.0,
-    'Leitos': 20.0,
+    'Leitos': 13.0,
     'Leitos UTI': 25.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.0, 7.0, 0.95, 'lognorm'),
@@ -43,7 +43,7 @@ DERIVATIVES = {
         #'Ventiladores': lambda df: df['Leitos'] * DERIVATIVES['values']['Ventiladores'],
     },
     'values': {
-        'Leitos': 20.0,
+        'Leitos': 13.0,
         'Leitos UTI': 25.5
         #'Ventiladores': 0.25,
     },
