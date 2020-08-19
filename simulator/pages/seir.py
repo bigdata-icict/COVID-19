@@ -29,7 +29,7 @@ DEFAULT_STATE = 'SP'
 DEFAULT_COUNTRY = 'Brasil'
 DEFAULT_PARAMS = {
     'fator_subr': 1.0,
-    'asymptomatic_rate': 50.0,
+    'asymptomatic_rate': 0,
     'Leitos': 13.0,
     'Leitos UTI': 25.0,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
@@ -599,6 +599,7 @@ def write():
     w_scale = st.selectbox('Escala do eixo Y',
                            ['log', 'linear'],
                            index=1)
+                           
     fig = plot_EI(model_output, w_scale, w_date)
     st.altair_chart(fig)
     download_placeholder = st.empty()
