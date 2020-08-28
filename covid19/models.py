@@ -236,6 +236,7 @@ class SEIRBayes:
         # init deaths compartment
         D = np.zeros((self._params['t_max'], size))
         D[0,] = self.params["deaths"]["init_deaths"]
+        IDaily = np.zeros((self._params['t_max'], size))
 
         r0 = self._params['r0_dist'].rvs(size)
         gamma = 1/self._params['gamma_inv_dist'].rvs(size)
@@ -254,10 +255,11 @@ class SEIRBayes:
             dE = SE - EI
             dI = EI - IR
             dR = IR - 0
-            dD = dR * self.params["leitos"] * self.params["deaths"]["death_rate"]
+            dD = dR * self.params["deaths"]["death_rate"]
 
             S[t, ] = S[t-1, ] + dS
             E[t, ] = E[t-1, ] + dE
+            IDaily[t, ] = EI 
             I[t, ] = I[t-1, ] + dI
             R[t, ] = R[t-1, ] + dR
             D[t,] = (D[t - 1,] + dD).clip(0).astype(int)
@@ -265,4 +267,4 @@ class SEIRBayes:
         if return_param_samples:
             return S, E, I, R, D, t_space, r0, alpha, gamma, beta
         else:
-            return S, E, I, R, D, t_space
+            return S, E, I, R, D, IDaily, t_space

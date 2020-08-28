@@ -54,6 +54,13 @@ O gráfico abaixo mostra a estimativa de óbitos diários para os parâmetros se
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
 '''
 
+INFECTED_INTRO='''
+### Previsão de Infectados
+O gráfico abaixo mostra a estimativa de infecções diárias para os parâmetros selecionados. O cálculo é realizado a partir da aplicação de uma taxa de subnotificação.
+
+**(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
+'''
+
 DEATH_DETAIL='''
 <details>
     <summary style="color: rgb(38, 39, 48);"><strong>Mostrar metodologia de cálculo</strong></summary>
@@ -232,6 +239,14 @@ LETHALITY_TYPE_DETAIL = '''
 
 def DEATHS_TOTAL_COUNT(lower, mean, upper): return f'''
 ** Total de óbitos acumulados até o período selecionado para a simulação: **
+
+* Limite superior: {upper}
+* Média: {mean}
+* Limite inferior: {lower}
+'''
+
+def INFECTED_TOTAL_COUNT(lower, mean, upper): return f'''
+** Total de Infectados acumulados até o período selecionado para a simulação: **
 
 * Limite superior: {upper}
 * Média: {mean}

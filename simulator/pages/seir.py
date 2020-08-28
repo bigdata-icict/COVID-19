@@ -11,7 +11,9 @@ from pages.utils.viz import (prep_tidy_data_to_plot,
                              plot_r0,
                              prep_death_data_to_plot,
                              make_death_chart,
-                             plot_derivatives)
+                             plot_derivatives,
+                             prep_infected_data_to_plot,
+                             make_infected_chart)
 from pages.utils import texts
 from covid19 import parameter_adjustment
 
@@ -44,7 +46,7 @@ DERIVATIVES = {
     },
     'values': {
         'Leitos': 13.0,
-        'Leitos UTI': 25.5
+        'Leitos UTI': 25.0
         #'Ventiladores': 0.25,
     },
     'descriptions': {
@@ -257,7 +259,7 @@ def make_param_widgets(NEIR0, widget_values, vulnerable_population, state, r0_sa
                     hidden_value=int(widget_values.get('t_max', 90)))(
                     'Período de simulação em dias (t_max)',
                     min_value=7, max_value=90*3, step=1,
-                    value=90)
+                    value=15)
     return ({'fator_subr': (fator_subr+adjustment)/ (1 - asymptomatic_rate),
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
@@ -284,12 +286,12 @@ def make_death_subr_widget(defaults, place, *placeholders):
         return 1.0
 
 @st.cache
-def make_NEIR0(cases_df, population_df, place, date, gamma_sup=DEFAULT_PARAMS['gamma_inv_dist'][1]):
+def make_NEIR0(cases_df, population_df, place, date,rt, gamma_sup=DEFAULT_PARAMS['gamma_inv_dist'][1]):
     N0 = population_df[place]
     I0 = (cases_df[place]
           .pipe(estimate_active_cases, gamma_sup)
             ['estimatedActiveCases'][date])
-    E0 = 2*I0
+    E0 = rt*I0
     R0 = (cases_df[place]
           .pipe(estimate_active_cases, gamma_sup)
             ['estimatedRecoveredCases'][date])
@@ -337,7 +339,7 @@ def make_download_href(df, params, r0_dist, should_estimate_r0):
 
 
 def make_EI_df(model, model_output, sample_size):
-    _, E, I, _, D, t = model_output
+    _, E, I, _, D, _, t = model_output
     size = sample_size*model.params['t_max']
     return (pd.DataFrame({'Exposed': E.reshape(size),
                           'Infected': I.reshape(size),
@@ -346,7 +348,7 @@ def make_EI_df(model, model_output, sample_size):
 
 
 def plot_EI(model_output, scale, start_date):
-    _, E, I, _, D, t = model_output
+    _, E, I, _, D, _, t = model_output
     source = prep_tidy_data_to_plot(E, I, t, start_date)
     return make_combined_chart(source,
                                scale=scale,
@@ -381,7 +383,7 @@ def estimate_lethality(cases_death, cases_covid, w_granularity, w_place, lethali
     return (float(lethality_mean), show_leth_rate_message)
 
 def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification_factor):
-    _, _, _, R, D, t = model_output
+    _, _, _, R, D, _, t = model_output
     deaths_accum = D
     deaths_daily = np.diff(deaths_accum, axis=0, prepend=0)
     deaths_daily = deaths_daily[1:]
@@ -395,6 +397,19 @@ def plot_deaths(model_output, scale, start_date, lethality_mean, subnotification
                             scale=scale,
                             show_uncertainty=True))
 
+def plot_infected(model_output, scale, start_date,subnotification_factor):
+    _, _, I, R, _, IDaily,t = model_output
+    infected_daily = IDaily[1:]
+    infected_total = np.sum(IDaily, axis=0)
+    infected_total += R[0]
+    infected_total_mean = np.ceil(infected_total.mean()).astype(int)
+    infected_total_bounds = np.ceil(np.quantile(infected_total, [0.05, 0.95])).astype(int)
+    source = prep_infected_data_to_plot(infected_daily, t[1:], start_date) 
+    return (*infected_total_bounds,
+            infected_total_mean,
+            make_infected_chart(source,
+                            scale=scale,
+                            show_uncertainty=True))
 
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     used_brazil = False
@@ -512,8 +527,8 @@ def write():
     options_date = make_date_options(cases_df, w_place)
     w_date = st.sidebar.selectbox('Data inicial',
                                   options=options_date,
-                                  index=len(options_date)-14)
-    NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
+                                  index=len(options_date)-1)
+    
 
     # Configurações da simulação
     st.markdown(texts.SIMULATION_CONFIG)
@@ -544,6 +559,7 @@ def write():
     else:
         r0_dist = make_r0_widgets(widget_values)
         st.markdown(texts.r0_ESTIMATION_DONT)
+    NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date,np.mean(r0_dist))
     # Explicação dos parâmetros de óbito e leitos
     st.markdown(texts.DESC_PARAMS_DEATHS)
     st.markdown(texts.DESC_PARAMS_LEITOS)
@@ -608,14 +624,26 @@ def write():
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
 
+    st.markdown(texts.INFECTED_INTRO)
+
+    (infected_total_lower_bound,
+     infected_total_upper_bound,
+     infected_total_mean,
+     fig_infected) = plot_infected(model_output, 'linear', w_date,
+                               w_params['fator_subr'])
+    st.altair_chart(fig_infected)
+    st.markdown(texts.INFECTED_TOTAL_COUNT(infected_total_lower_bound, 
+                                        infected_total_mean, 
+                                        infected_total_upper_bound))
     # Plot Deaths
     st.markdown(texts.DEATHS_INTRO)
-
+    
     if show_leth_age_message:
         st.markdown(
         f"**Este estado não apresentou dados de faixa etária."
         f" Por isso, são usados dados do Brasil para estimar as taxas de letalidade.**"
     )
+    
     
 
     (deaths_total_lower_bound,
@@ -624,6 +652,8 @@ def write():
      fig_deaths) = plot_deaths(model_output, 'linear', w_date,
                                lethality_mean * death_subnotification,
                                w_params['fator_subr'])
+
+    
 
 
     st.altair_chart(fig_deaths)

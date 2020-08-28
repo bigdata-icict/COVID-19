@@ -92,6 +92,20 @@ def prep_death_data_to_plot(R, t_space, start_date):
 
     return data
 
+def prep_infected_data_to_plot(I, t_space, start_date):
+    df_I = unstack_iterations_ndarray(I, t_space, plot_params["infectado"]["name"])
+    
+    agg_df_I = compute_mean_and_boundaries(df_I, plot_params["infectado"]["name"])
+
+    data = (
+        agg_df_I.reset_index()
+    )
+
+    start_datetime = pd.to_datetime(start_date)
+    dates = [start_datetime + timedelta(offset) for offset in data['Dias']]
+    data["Datas"] = dates
+
+    return data
 
 def make_exposed_infected_line_chart(data: pd.DataFrame, scale="log"):
     return (
@@ -179,7 +193,7 @@ def make_death_chart(data, scale="log", show_uncertainty=True):
             height=400,
             title="Evolução dos óbitos diários causados pela COVID-19",
         )
-        .mark_line(color=plot_params['obito']['color'])
+        .mark_line(color=plot_params["exposto"]["color"])
         .transform_fold(
             ["Óbito_mean"],
             ["Variável", "Valor"]  # equivalent to id_vars in pandas" melt
@@ -202,6 +216,48 @@ def make_death_chart(data, scale="log", show_uncertainty=True):
             scale=scale,
         )
         output = alt.layer(band_R, lines)
+    
+    return (
+        alt.vconcat(
+            output.interactive(),
+            padding={"top": 20}
+        )
+        .configure_title(fontSize=16)
+        .configure_axis(labelFontSize=14, titleFontSize=14)
+        .configure_legend(labelFontSize=14, titleFontSize=14)
+    )
+
+def make_infected_chart(data, scale="log", show_uncertainty=True):
+    lines = (
+        alt.Chart(
+            data,
+            width=600,
+            height=400,
+            title="Evolução das Infecções diárias causados pela COVID-19",
+        )
+        .mark_line(color=plot_params['infectado']['color'])
+        .transform_fold(
+            ["Infectado_mean"],
+            ["Variável", "Valor"]  # equivalent to id_vars in pandas" melt
+        )
+        .encode(
+            x=alt.X("Datas:T", axis=alt.Axis(title="Data", labelSeparation=3)),
+            y=alt.Y("Valor:Q", title="Qtde. de pessoas", scale=alt.Scale(type=scale)),
+            #color="Variável:N"
+        )
+    )
+
+    if not show_uncertainty:
+        output = alt.layer(lines)
+
+    else:
+        band_I = make_exposed_infected_error_area_chart(
+            data,
+            plot_params["infectado"]["name"],
+            plot_params["infectado"]["color"],
+            scale=scale,
+        )
+        output = alt.layer(band_I, lines)
     
     return (
         alt.vconcat(
